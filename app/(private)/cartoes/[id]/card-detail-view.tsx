@@ -24,6 +24,7 @@ type Statement = {
   effectiveStatus: "open" | "closed" | "overdue" | "paid";
   totalCents: number;
   paidCents: number;
+  owedCents: number;
 };
 
 export function CardDetailView({

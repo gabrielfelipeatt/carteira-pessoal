@@ -9,6 +9,7 @@ import { parseBrlToCents } from "@/lib/finance/money";
 import {
   closeStatement as closeStatementLogic,
   computeEffectiveStatus,
+  computeStatementOwedCents,
   payStatement as payStatementLogic,
 } from "@/lib/finance/statements";
 
@@ -26,10 +27,16 @@ export async function listStatementsForCard(creditCardId: string) {
     )
     .orderBy(desc(creditCardStatements.referenceMonth));
 
-  return rows.map((statement) => ({
-    ...statement,
-    effectiveStatus: computeEffectiveStatus(statement),
-  }));
+  return Promise.all(
+    rows.map(async (statement) => ({
+      ...statement,
+      effectiveStatus: computeEffectiveStatus(statement),
+      // Para fatura aberta, `totalCents` fica em 0 até o fechamento — o
+      // "quanto devo" precisa ser calculado em tempo real a partir das
+      // compras já lançadas no ciclo.
+      owedCents: await computeStatementOwedCents(statement),
+    })),
+  );
 }
 
 export async function listStatementTransactions(statementId: string) {

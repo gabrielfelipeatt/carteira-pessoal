@@ -6,6 +6,9 @@ import { localDateStringToUtcDate } from "@/lib/finance/dates";
 
 export class StatementIntegrityError extends Error {}
 
+/** `db` normal ou o `tx` de dentro de um `db.transaction(...)` — ambos suportam `.select()`. */
+type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /**
  * `resolveCycleForDate` é puro e trabalha em termos de dia-de-calendário via
  * UTC (para ser testável sem depender de fuso horário). Antes de persistir,
@@ -125,6 +128,42 @@ async function assertOwnedStatement(userId: string, statementId: string) {
   return statement;
 }
 
+/**
+ * Soma só as compras (nunca pagamentos) vinculadas a uma fatura — usado
+ * tanto para fechar a fatura quanto para saber "quanto já devo" numa fatura
+ * ainda aberta (onde `totalCents` fica em 0 até o fechamento).
+ */
+async function sumStatementPurchases(
+  tx: DbOrTx,
+  statementId: string,
+): Promise<number> {
+  const [{ total }] = await tx
+    .select({
+      total: sql<number>`coalesce(sum(${transactions.amountCents}), 0)`,
+    })
+    .from(transactions)
+    .where(
+      and(eq(transactions.statementId, statementId), eq(transactions.type, "expense")),
+    );
+  return total;
+}
+
+/**
+ * Quanto uma fatura deve no momento: para uma fatura fechada/vencida/paga,
+ * `totalCents` já é o valor final; para uma aberta, precisa somar as
+ * compras do ciclo em tempo real (nunca fica "congelado" até o fechamento).
+ */
+export async function computeStatementOwedCents(statement: {
+  id: string;
+  status: string;
+  totalCents: number;
+}): Promise<number> {
+  if (statement.status === "open") {
+    return sumStatementPurchases(db, statement.id);
+  }
+  return statement.totalCents;
+}
+
 /** Fechamento é sempre uma ação explícita do usuário — nunca automático. */
 export async function closeStatement(userId: string, statementId: string) {
   const statement = await assertOwnedStatement(userId, statementId);
@@ -132,16 +171,20 @@ export async function closeStatement(userId: string, statementId: string) {
     throw new StatementIntegrityError("Esta fatura já está fechada.");
   }
 
-  const [{ total }] = await db
-    .select({
-      total: sql<number>`coalesce(sum(${transactions.amountCents}), 0)`,
-    })
-    .from(transactions)
-    .where(eq(transactions.statementId, statementId));
+  const total = await sumStatementPurchases(db, statementId);
+  // Se pagamentos adiantados (feitos com a fatura ainda aberta) já cobrem o
+  // total apurado no fechamento, a fatura fecha direto como paga — nunca
+  // fica "fechada" com saldo zerado esperando uma ação a mais do usuário.
+  const isFullyPaid = statement.paidCents >= total;
 
   await db
     .update(creditCardStatements)
-    .set({ status: "closed", closedAt: new Date(), totalCents: total })
+    .set({
+      status: isFullyPaid ? "paid" : "closed",
+      closedAt: new Date(),
+      totalCents: total,
+      paidAt: isFullyPaid ? (statement.paidAt ?? new Date()) : statement.paidAt,
+    })
     .where(eq(creditCardStatements.id, statementId));
 }
 
@@ -149,6 +192,11 @@ export async function closeStatement(userId: string, statementId: string) {
  * Registra um pagamento (total ou parcial) de fatura — sempre uma
  * transferência (`type: 'transfer'`), nunca uma nova despesa. É assim,
  * estruturalmente, que "pagar fatura ≠ nova despesa" é garantido.
+ *
+ * Pode ser feito com a fatura ainda aberta (adiantamento) — nesse caso o
+ * "quanto devo" é calculado em tempo real a partir das compras já lançadas
+ * no ciclo, e a fatura continua aberta mesmo se o adiantamento cobrir tudo,
+ * porque novas compras ainda podem entrar até o fechamento.
  */
 export async function payStatement(
   userId: string,
@@ -173,16 +221,16 @@ export async function payStatement(
     if (!statement) {
       throw new StatementIntegrityError("Fatura não encontrada.");
     }
-    if (statement.status === "open") {
-      throw new StatementIntegrityError(
-        "Feche a fatura antes de registrar um pagamento.",
-      );
-    }
     if (statement.status === "paid") {
       throw new StatementIntegrityError("Esta fatura já está paga.");
     }
 
-    const remaining = statement.totalCents - statement.paidCents;
+    const owedCents =
+      statement.status === "open"
+        ? await sumStatementPurchases(tx, statementId)
+        : statement.totalCents;
+
+    const remaining = owedCents - statement.paidCents;
     if (amountCents > remaining) {
       throw new StatementIntegrityError(
         "O valor do pagamento não pode ser maior que o saldo restante da fatura.",
@@ -214,7 +262,10 @@ export async function payStatement(
     });
 
     const newPaidCents = statement.paidCents + amountCents;
-    const isFullyPaid = newPaidCents >= statement.totalCents;
+    // Uma fatura aberta nunca vira "paga" sozinha — novas compras ainda
+    // podem chegar até o fechamento explícito. Só fecha/finaliza como paga
+    // quando já estava fechada/vencida e o pagamento cobre o total.
+    const isFullyPaid = statement.status !== "open" && newPaidCents >= owedCents;
 
     await tx
       .update(creditCardStatements)
@@ -252,9 +303,11 @@ export async function computeAvailableCreditCents(
     .filter((s) => s.status === "closed" || s.status === "paid")
     .reduce((sum, s) => sum + (s.totalCents - s.paidCents), 0);
 
-  const openStatementIds = statements
-    .filter((s) => s.status === "open")
-    .map((s) => s.id);
+  const openStatements = statements.filter((s) => s.status === "open");
+  const openStatementIds = openStatements.map((s) => s.id);
+  // Adiantamentos pagos numa fatura ainda aberta já reduzem o quanto está
+  // "em uso" do limite — nunca contados como se fossem gasto novo.
+  const openPaidCents = openStatements.reduce((sum, s) => sum + s.paidCents, 0);
 
   let openSpend = 0;
   if (openStatementIds.length > 0) {
@@ -263,8 +316,13 @@ export async function computeAvailableCreditCents(
         total: sql<number>`coalesce(sum(${transactions.amountCents}), 0)`,
       })
       .from(transactions)
-      .where(inArray(transactions.statementId, openStatementIds));
-    openSpend = row?.total ?? 0;
+      .where(
+        and(
+          inArray(transactions.statementId, openStatementIds),
+          eq(transactions.type, "expense"),
+        ),
+      );
+    openSpend = (row?.total ?? 0) - openPaidCents;
   }
 
   return card.limitCents - closedDebt - openSpend;

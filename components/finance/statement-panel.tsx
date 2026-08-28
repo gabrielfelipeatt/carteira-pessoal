@@ -35,6 +35,10 @@ type Statement = {
   effectiveStatus: "open" | "closed" | "overdue" | "paid";
   totalCents: number;
   paidCents: number;
+  /** Quanto a fatura deve agora — para uma fatura aberta, calculado em tempo
+   * real a partir das compras do ciclo (nunca `totalCents`, que só é
+   * apurado no fechamento). */
+  owedCents: number;
 };
 
 const statusLabels: Record<Statement["effectiveStatus"], string> = {
@@ -88,7 +92,8 @@ export function StatementPanel({
     }
   }
 
-  const remaining = statement.totalCents - statement.paidCents;
+  const remaining = statement.owedCents - statement.paidCents;
+  const canPay = statement.status !== "paid" && remaining > 0;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card">
@@ -110,7 +115,7 @@ export function StatementPanel({
             {formatDateShort(statement.periodStart)} – {formatDateShort(statement.periodEnd)} · vence {formatDateShort(statement.dueDate)}
           </p>
         </div>
-        <MoneyText cents={statement.totalCents} tone="neutral" className="text-sm" />
+        <MoneyText cents={statement.owedCents} tone="neutral" className="text-sm" />
         {expanded ? (
           <ChevronUp className="size-4 text-muted-foreground" aria-hidden />
         ) : (
@@ -121,39 +126,52 @@ export function StatementPanel({
       {expanded ? (
         <div className="flex flex-col gap-3 border-t border-border px-4 py-3">
           {statement.status === "open" ? (
-            <AlertDialog>
-              <AlertDialogTrigger
-                render={
-                  <Button variant="outline" size="sm" className="h-9 self-start">
-                    Fechar fatura
-                  </Button>
-                }
-              />
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Fechar esta fatura?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Depois de fechada, as compras deste ciclo não podem mais
-                    ser editadas ou removidas. Novas compras entram no
-                    próximo ciclo.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction disabled={closing} onClick={handleClose}>
-                    Fechar fatura
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          ) : statement.status !== "paid" ? (
-            <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">
+              Pagamentos numa fatura aberta são adiantamentos — o ciclo só
+              fecha (e vira &quot;Paga&quot;, se já tiver quitado tudo) quando
+              você fechar explicitamente.
+            </p>
+          ) : null}
+
+          {canPay || statement.status === "open" ? (
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground">
                 Restante: <MoneyText cents={remaining} tone="neutral" className="text-xs" />
               </span>
-              <Button size="sm" className="h-9" onClick={() => setPayOpen(true)}>
-                Pagar fatura
-              </Button>
+              <div className="flex gap-2">
+                {statement.status === "open" ? (
+                  <AlertDialog>
+                    <AlertDialogTrigger
+                      render={
+                        <Button variant="outline" size="sm" className="h-9">
+                          Fechar fatura
+                        </Button>
+                      }
+                    />
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Fechar esta fatura?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Depois de fechada, as compras deste ciclo não podem
+                          mais ser editadas ou removidas. Novas compras entram
+                          no próximo ciclo.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction disabled={closing} onClick={handleClose}>
+                          Fechar fatura
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                ) : null}
+                {canPay ? (
+                  <Button size="sm" className="h-9" onClick={() => setPayOpen(true)}>
+                    Pagar fatura
+                  </Button>
+                ) : null}
+              </div>
             </div>
           ) : null}
 
