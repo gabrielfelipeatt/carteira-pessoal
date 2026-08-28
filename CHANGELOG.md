@@ -4,6 +4,19 @@ Todas as alterações relevantes deste projeto são documentadas neste arquivo.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/) e o
 versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.2.1] - 2026-08-28
+
+### Corrigido
+- Fatura com pagamento parcial mostrava o valor total original como número
+  principal (ex.: R$ 256,01), mesmo já tendo sido pago parte dele — dava a
+  impressão de que o pagamento não tinha efeito. Agora o número principal do
+  cabeçalho é o saldo restante, com o total original como legenda ("de R$
+  256,01") só quando já houve algum pagamento.
+- O pagamento de fatura não aparecia no histórico de lançamentos do cartão
+  (`listStatementTransactions` filtrava só `type = 'expense'`, excluindo o
+  `transfer` do pagamento). Agora compras e pagamentos aparecem juntos,
+  visualmente distintos.
+
 ## [0.2.0] - 2026-08-28
 
 ### Alterado

@@ -42,6 +42,9 @@ export async function listStatementsForCard(creditCardId: string) {
 export async function listStatementTransactions(statementId: string) {
   const userId = await requireUserId();
 
+  // Inclui tanto as compras (`expense`) quanto os pagamentos (`transfer`) já
+  // registrados nesta fatura — senão um pagamento parcial "some" do
+  // histórico, dando a impressão de que nada foi pago.
   return db
     .select({
       id: transactions.id,
@@ -52,11 +55,7 @@ export async function listStatementTransactions(statementId: string) {
     })
     .from(transactions)
     .where(
-      and(
-        eq(transactions.statementId, statementId),
-        eq(transactions.userId, userId),
-        eq(transactions.type, "expense"),
-      ),
+      and(eq(transactions.statementId, statementId), eq(transactions.userId, userId)),
     )
     .orderBy(desc(transactions.occurredAt));
 }

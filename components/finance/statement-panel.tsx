@@ -21,7 +21,8 @@ import { MoneyText } from "@/components/finance/money-text";
 import { PayStatementForm } from "@/components/finance/pay-statement-form";
 import { closeStatementAction, listStatementTransactions } from "@/lib/actions/statements";
 import { formatDateShort } from "@/lib/finance/dates";
-import type { accounts as accountsTable, StatementStatus } from "@/db/schema";
+import { formatCentsToBRL } from "@/lib/finance/money";
+import type { accounts as accountsTable, StatementStatus, TransactionType } from "@/db/schema";
 
 type Account = typeof accountsTable.$inferSelect;
 
@@ -65,7 +66,14 @@ export function StatementPanel({
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [transactions, setTransactions] = useState<
-    { id: string; amountCents: number; occurredAt: Date; description: string }[] | null
+    | {
+        id: string;
+        type: TransactionType;
+        amountCents: number;
+        occurredAt: Date;
+        description: string;
+      }[]
+    | null
   >(null);
   const [payOpen, setPayOpen] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -115,7 +123,14 @@ export function StatementPanel({
             {formatDateShort(statement.periodStart)} – {formatDateShort(statement.periodEnd)} · vence {formatDateShort(statement.dueDate)}
           </p>
         </div>
-        <MoneyText cents={statement.owedCents} tone="neutral" className="text-sm" />
+        <div className="flex shrink-0 flex-col items-end">
+          <MoneyText cents={remaining} tone="neutral" className="text-sm" />
+          {statement.paidCents > 0 ? (
+            <span className="text-[11px] text-muted-foreground">
+              de {formatCentsToBRL(statement.owedCents)}
+            </span>
+          ) : null}
+        </div>
         {expanded ? (
           <ChevronUp className="size-4 text-muted-foreground" aria-hidden />
         ) : (
@@ -187,9 +202,14 @@ export function StatementPanel({
                     <p className="truncate text-sm text-foreground">{t.description}</p>
                     <p className="text-xs text-muted-foreground">
                       {formatDateShort(t.occurredAt)}
+                      {t.type === "transfer" ? " · pagamento" : ""}
                     </p>
                   </div>
-                  <MoneyText cents={t.amountCents} tone="neutral" className="shrink-0 text-sm" />
+                  <MoneyText
+                    cents={t.amountCents}
+                    tone={t.type === "transfer" ? "auto" : "neutral"}
+                    className="shrink-0 text-sm"
+                  />
                 </li>
               ))}
             </ul>
