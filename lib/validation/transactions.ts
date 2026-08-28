@@ -1,0 +1,47 @@
+import { z } from "zod";
+
+const baseFields = {
+  id: z.string().optional(),
+  date: z.string().min(1, "Informe a data."), // "YYYY-MM-DD", convertido para UTC no servidor
+  amount: z.string().min(1, "Informe o valor."),
+  description: z.string().trim().min(1, "Informe uma descrição."),
+  notes: z.string().trim().optional(),
+};
+
+export const incomeFormSchema = z.object({
+  ...baseFields,
+  accountId: z.string().min(1, "Selecione uma conta."),
+  categoryId: z.string().min(1, "Selecione uma categoria."),
+  paymentMethodId: z.string().min(1, "Selecione a forma de recebimento."),
+});
+export type IncomeFormInput = z.infer<typeof incomeFormSchema>;
+
+export const expenseFormSchema = z.object({
+  ...baseFields,
+  accountId: z.string().min(1, "Selecione uma conta."),
+  categoryId: z.string().min(1, "Selecione uma categoria."),
+  paymentMethodId: z.string().min(1, "Selecione a forma de pagamento."),
+});
+export type ExpenseFormInput = z.infer<typeof expenseFormSchema>;
+
+export const transferFormSchema = z
+  .object({
+    ...baseFields,
+    // Para edição, este é o `transferGroupId` (liga as 2 pontas) — nunca o
+    // id de uma única linha de `transactions`.
+    originAccountId: z.string().min(1, "Selecione a conta de origem."),
+    destinationAccountId: z.string().min(1, "Selecione a conta de destino."),
+    paymentMethodId: z.string().min(1, "Selecione a forma de transferência."),
+  })
+  .refine((data) => data.originAccountId !== data.destinationAccountId, {
+    message: "Origem e destino precisam ser contas diferentes.",
+    path: ["destinationAccountId"],
+  });
+export type TransferFormInput = z.infer<typeof transferFormSchema>;
+
+export const adjustmentFormSchema = z.object({
+  ...baseFields,
+  accountId: z.string().min(1, "Selecione uma conta."),
+  direction: z.enum(["inflow", "outflow"]),
+});
+export type AdjustmentFormInput = z.infer<typeof adjustmentFormSchema>;
