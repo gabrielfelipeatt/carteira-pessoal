@@ -4,7 +4,12 @@ const baseURL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  fullyParallel: true,
+  // Turso/SQLite é single-writer: logins simultâneos de vários workers batem
+  // em escrita concorrente na tabela de sessão do Better Auth (app é de
+  // usuário único, nunca sofre isso no uso real). Um worker por vez evita
+  // flakiness nos testes sem mudar nada da arquitetura de produção.
+  fullyParallel: false,
+  workers: 1,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: [["html", { open: "never" }]],

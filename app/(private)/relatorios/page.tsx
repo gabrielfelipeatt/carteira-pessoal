@@ -1,23 +1,27 @@
-import { PieChart } from "lucide-react";
-import { EmptyState } from "@/components/finance/states";
+import { listAccounts } from "@/lib/actions/accounts";
+import { listCategories } from "@/lib/actions/categories";
+import { listPaymentMethods } from "@/lib/actions/payment-methods";
+import { currentYearMonth, monthRange, utcDateToLocalDateString } from "@/lib/finance/dates";
+import { RelatoriosView } from "./relatorios-view";
 
-export default function RelatoriosPage() {
+export default async function RelatoriosPage() {
+  const [accounts, categories, paymentMethods] = await Promise.all([
+    listAccounts(),
+    listCategories(),
+    listPaymentMethods(),
+  ]);
+
+  const { from, to } = monthRange(currentYearMonth());
+
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold text-foreground">
-          Relatórios
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Gastos por categoria, evolução de saldo e filtros por período.
-        </p>
-      </div>
-
-      <EmptyState
-        icon={<PieChart className="size-8 text-muted-foreground" aria-hidden />}
-        title="Sem dados para exibir"
-        description="Os relatórios aparecem aqui assim que você tiver lançamentos registrados."
-      />
-    </div>
+    <RelatoriosView
+      initialFilters={{
+        from: utcDateToLocalDateString(from),
+        to: utcDateToLocalDateString(to),
+      }}
+      accounts={accounts}
+      categories={categories}
+      paymentMethods={paymentMethods}
+    />
   );
 }

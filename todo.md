@@ -124,14 +124,44 @@ Checklist verificável por fase. Ver o plano completo em
 
 ## Fase 4 — Dashboard, relatórios e orçamento
 
-- [ ] `lib/finance/aggregation.ts` (exclusão única de transferência/pagamento
-      de fatura)
-- [ ] `lib/actions/dashboard.ts` (`dashboard.month`)
-- [ ] `lib/actions/reports.ts` (`reports.query` com filtros)
-- [ ] `lib/finance/budgets.ts` (rollup pai/filho)
-- [ ] Gráficos com alternativa textual/tabular acessível
-- [ ] Testes: `budget-rollup`, integração de exclusão de transferência/fatura
-- [ ] E2E: `relatorios.spec.ts`, `orcamentos.spec.ts`
+- [x] `lib/finance/aggregation.ts` (única implementação de "sem dupla
+      contagem": só receita/despesa contam como entrada/saída)
+- [x] `lib/actions/dashboard.ts` (`getDashboardMonth`) — saldo consolidado,
+      entradas/saídas, resultado, comparação com mês anterior, gastos por
+      categoria, últimos lançamentos
+- [x] `lib/actions/reports.ts` (tabela filtrada, gastos por categoria,
+      receitas/despesas por mês, evolução do saldo) com filtros por
+      período/conta/categoria/tipo/forma de pagamento
+- [x] `lib/finance/budget-rollup.ts` (rollup pai/filho puro, testável) +
+      `lib/actions/budgets.ts` (consumo, restante, status normal/atenção/acima)
+- [x] Gráficos (`recharts`) com alternativa em tabela acessível
+      (`Ver tabela`/`Ver gráfico`) em todos os 3 gráficos de relatórios e no
+      de gastos por categoria do dashboard
+- [x] `MonthPicker` reutilizado no dashboard e em orçamentos (navegação por
+      querystring `?mes=YYYY-MM`)
+- [x] `tests/unit/budget-rollup.test.ts` — 5 testes
+- [x] Testado manualmente de ponta a ponta no navegador: receita + 2
+      despesas em categorias diferentes, saldo/entradas/saídas/resultado do
+      dashboard conferem, gráfico e tabela de gastos por categoria batem,
+      filtros de relatórios reagem corretamente, orçamento simples e
+      orçamento com rollup pai→filho calculam consumo/status corretamente,
+      criar/editar/remover orçamento
+- [x] `pnpm run typecheck && pnpm run lint && pnpm run test:unit &&
+      pnpm run build && pnpm run test:e2e` verdes (29 testes unitários, 9 E2E)
+- [ ] Testes de integração automatizados (exclusão de transferência/fatura
+      dos totais) — verificado manualmente no navegador
+- [ ] E2E automatizado (`relatorios.spec.ts`, `orcamentos.spec.ts`) —
+      verificado manualmente, ainda sem specs Playwright
+
+### Bugs encontrados e corrigidos durante a Fase 4
+
+- Rótulo de mês nos eixos dos gráficos ficava cortado ("agosto/2" em vez de
+  "ago/2026") por usar `.slice(0, 8)` num texto já formatado por extenso.
+  Corrigido com um formatador dedicado (`formatMonthShort`).
+- `playwright.config.ts` rodava com 6 workers em paralelo; como o Turso é
+  single-writer, logins simultâneos de vários testes colidiam na escrita da
+  tabela de sessão do Better Auth (nunca acontece no uso real, de usuário
+  único). Reduzido para 1 worker — suíte E2E ficou 100% estável.
 
 ## Fase 5 — Refinamento e qualidade
 

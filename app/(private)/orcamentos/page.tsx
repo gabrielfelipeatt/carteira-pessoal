@@ -1,23 +1,20 @@
-import { Target } from "lucide-react";
-import { EmptyState } from "@/components/finance/states";
+import { listBudgets } from "@/lib/actions/budgets";
+import { listCategories } from "@/lib/actions/categories";
+import { currentYearMonth } from "@/lib/finance/dates";
+import { OrcamentosView } from "./orcamentos-view";
 
-export default function OrcamentosPage() {
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold text-foreground">
-          Orçamentos
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Limites mensais por categoria.
-        </p>
-      </div>
+export default async function OrcamentosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mes?: string }>;
+}) {
+  const { mes } = await searchParams;
+  const yearMonth = mes && /^\d{4}-\d{2}$/.test(mes) ? mes : currentYearMonth();
 
-      <EmptyState
-        icon={<Target className="size-8 text-muted-foreground" aria-hidden />}
-        title="Nenhum orçamento definido"
-        description="Defina um limite mensal por categoria para acompanhar seus gastos."
-      />
-    </div>
-  );
+  const [budgets, categories] = await Promise.all([
+    listBudgets(yearMonth),
+    listCategories(),
+  ]);
+
+  return <OrcamentosView yearMonth={yearMonth} budgets={budgets} categories={categories} />;
 }
