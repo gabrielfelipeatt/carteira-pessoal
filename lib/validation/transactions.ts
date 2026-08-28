@@ -27,6 +27,10 @@ export const expenseFormSchema = z
     paymentMethodId: z.string().min(1, "Selecione a forma de pagamento."),
     isCredit: z.boolean(),
     creditCardId: z.string().optional(),
+    // Preenchidos só quando este lançamento vem da confirmação de uma
+    // despesa fixa recorrente — nunca usados numa edição normal.
+    fixedExpenseId: z.string().optional(),
+    competencia: z.string().optional(),
   })
   .refine((data) => data.isCredit || !!data.accountId, {
     message: "Selecione uma conta.",

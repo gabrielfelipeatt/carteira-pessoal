@@ -8,6 +8,8 @@ import {
   categories,
   creditCardStatements,
   creditCards,
+  fixedExpenseSkips,
+  fixedExpenses,
   paymentMethods,
   transactions,
 } from "@/db/schema";
@@ -81,7 +83,7 @@ async function resolvePaymentMethod(userId: string, paymentMethodId: string) {
 
 async function assertOwned(
   userId: string,
-  table: typeof accounts | typeof categories,
+  table: typeof accounts | typeof categories | typeof fixedExpenses,
   id: string,
   label: string,
 ) {
@@ -205,7 +207,7 @@ export async function saveExpense(input: ExpenseFormInput) {
     creditCardId = null;
   }
 
-  const values = {
+  const baseValues = {
     userId,
     accountId,
     categoryId: parsed.categoryId,
@@ -222,17 +224,70 @@ export async function saveExpense(input: ExpenseFormInput) {
   };
 
   if (parsed.id) {
+    // Nunca toca fixedExpenseId/competencia numa edição — a proveniência de
+    // um lançamento gerado por despesa fixa sobrevive a edições normais.
     await db
       .update(transactions)
-      .set(values)
+      .set(baseValues)
       .where(and(eq(transactions.id, parsed.id), eq(transactions.userId, userId)));
+  } else if (parsed.fixedExpenseId && parsed.competencia) {
+    await assertFixedExpenseOccurrencePending(
+      userId,
+      parsed.fixedExpenseId,
+      parsed.competencia,
+    );
+    await db.insert(transactions).values({
+      ...baseValues,
+      fixedExpenseId: parsed.fixedExpenseId,
+      competencia: parsed.competencia,
+    });
   } else {
-    await db.insert(transactions).values(values);
+    await db.insert(transactions).values(baseValues);
   }
 
   revalidatePath("/lancamentos");
   revalidatePath("/cartoes");
+  revalidatePath("/despesas-fixas");
   revalidatePath("/");
+}
+
+/**
+ * Confirma que a competência de uma despesa fixa ainda está pendente
+ * (modelo do usuário, não gerada, não dispensada) — defesa contra
+ * duplo-clique/corrida na confirmação de uma ocorrência.
+ */
+async function assertFixedExpenseOccurrencePending(
+  userId: string,
+  fixedExpenseId: string,
+  competencia: string,
+) {
+  await assertOwned(userId, fixedExpenses, fixedExpenseId, "Despesa fixa");
+
+  const [alreadyGenerated] = await db
+    .select({ id: transactions.id })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.fixedExpenseId, fixedExpenseId),
+        eq(transactions.competencia, competencia),
+      ),
+    );
+  if (alreadyGenerated) {
+    throw new Error("Esta competência já foi lançada.");
+  }
+
+  const [alreadySkipped] = await db
+    .select({ id: fixedExpenseSkips.id })
+    .from(fixedExpenseSkips)
+    .where(
+      and(
+        eq(fixedExpenseSkips.fixedExpenseId, fixedExpenseId),
+        eq(fixedExpenseSkips.competencia, competencia),
+      ),
+    );
+  if (alreadySkipped) {
+    throw new Error("Esta competência já foi dispensada.");
+  }
 }
 
 export async function saveAdjustment(input: AdjustmentFormInput) {

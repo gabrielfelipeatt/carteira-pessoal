@@ -47,6 +47,7 @@ export function ExpenseForm({
   paymentMethods,
   creditCards,
   editing,
+  prefill,
   onSaved,
 }: {
   open: boolean;
@@ -65,6 +66,19 @@ export function ExpenseForm({
     description: string;
     notes: string | null;
     creditCardId: string | null;
+  };
+  /** Pré-preenche a confirmação de uma ocorrência de despesa fixa — nunca
+   * usado junto com `editing` (aqui é sempre um lançamento novo). */
+  prefill?: {
+    fixedExpenseId: string;
+    competencia: string;
+    categoryId: string;
+    paymentMethodId: string;
+    creditCardId: string | null;
+    accountId: string | null;
+    amountCents: number;
+    date: string;
+    description: string;
   };
   onSaved?: () => void;
 }) {
@@ -90,17 +104,31 @@ export function ExpenseForm({
           isCredit: !!editing.creditCardId,
           creditCardId: editing.creditCardId ?? "",
         }
-      : {
-          date: todayLocalDateString(),
-          amount: "",
-          description: "",
-          notes: "",
-          accountId: "",
-          categoryId: "",
-          paymentMethodId: "",
-          isCredit: false,
-          creditCardId: "",
-        },
+      : prefill
+        ? {
+            date: prefill.date,
+            amount: (prefill.amountCents / 100).toFixed(2).replace(".", ","),
+            description: prefill.description,
+            notes: "",
+            accountId: prefill.accountId ?? "",
+            categoryId: prefill.categoryId,
+            paymentMethodId: prefill.paymentMethodId,
+            isCredit: !!prefill.creditCardId,
+            creditCardId: prefill.creditCardId ?? "",
+            fixedExpenseId: prefill.fixedExpenseId,
+            competencia: prefill.competencia,
+          }
+        : {
+            date: todayLocalDateString(),
+            amount: "",
+            description: "",
+            notes: "",
+            accountId: "",
+            categoryId: "",
+            paymentMethodId: "",
+            isCredit: false,
+            creditCardId: "",
+          },
   });
 
   const paymentMethodId = watch("paymentMethodId");
@@ -133,11 +161,18 @@ export function ExpenseForm({
       <DialogContent className="max-w-sm rounded-3xl">
         <DialogHeader>
           <DialogTitle className="font-heading text-expense">
-            {editing ? "Editar despesa" : "Nova despesa"}
+            {editing ? "Editar despesa" : prefill ? "Confirmar despesa fixa" : "Nova despesa"}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+          {prefill ? (
+            <>
+              <input type="hidden" {...register("fixedExpenseId")} />
+              <input type="hidden" {...register("competencia")} />
+            </>
+          ) : null}
+
           <DateField label="Data" error={errors.date?.message} {...register("date")} />
 
           <PaymentMethodSelect

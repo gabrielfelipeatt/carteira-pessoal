@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDownCircle, ArrowUpCircle, MoreHorizontal, Wallet } from "lucide-react";
+import Link from "next/link";
+import {
+  ArrowDownCircle,
+  ArrowRight,
+  ArrowUpCircle,
+  MoreHorizontal,
+  Repeat,
+  Wallet,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/finance/states";
 import { AccountList } from "@/components/finance/account-list";
@@ -44,12 +52,14 @@ export function LancamentosView({
   paymentMethods,
   creditCards,
   transactions,
+  pendingFixedExpensesCount,
 }: {
   accounts: Account[];
   categories: Category[];
   paymentMethods: PaymentMethod[];
   creditCards: CreditCard[];
   transactions: TransactionListItem[];
+  pendingFixedExpensesCount: number;
 }) {
   const router = useRouter();
   const [dialog, setDialog] = useState<Dialog>({ kind: "none" });
@@ -141,6 +151,22 @@ export function LancamentosView({
           Outros
         </Button>
       </div>
+
+      {pendingFixedExpensesCount > 0 ? (
+        <Link
+          href="/despesas-fixas"
+          className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3"
+        >
+          <Repeat className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+          <span className="flex-1 text-sm text-foreground">
+            Você tem {pendingFixedExpensesCount}{" "}
+            {pendingFixedExpensesCount === 1
+              ? "despesa fixa pendente"
+              : "despesas fixas pendentes"}
+          </span>
+          <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+        </Link>
+      ) : null}
 
       <AccountList
         accounts={accounts}

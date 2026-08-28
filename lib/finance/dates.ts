@@ -74,3 +74,11 @@ export function previousYearMonth(yearMonth: string): string {
   const prevYear = month === 1 ? year - 1 : year;
   return `${prevYear}-${String(prevMonth).padStart(2, "0")}`;
 }
+
+/** "YYYY-MM" do mês seguinte ao informado. */
+export function nextYearMonth(yearMonth: string): string {
+  const [year, month] = yearMonth.split("-").map(Number);
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  return `${nextYear}-${String(nextMonth).padStart(2, "0")}`;
+}

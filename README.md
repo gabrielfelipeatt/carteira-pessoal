@@ -30,6 +30,11 @@ arquivos/extratos.
   evolução do saldo — todos com alternativa em tabela acessível
 - **Orçamentos**: limite mensal por categoria, com rollup automático de
   subcategorias na categoria-pai e status normal/atenção/acima do limite
+- **Despesas fixas recorrentes**: cadastro único (conta de luz, água,
+  internet...) com dia do mês e data final opcional; cada competência
+  pendente é calculada em tempo real (sem cron) e só vira lançamento com
+  confirmação explícita — também dá para dispensar um mês específico sem
+  afetar os seguintes
 
 ## Pré-requisitos
 
@@ -137,7 +142,7 @@ arquivos/extratos.
 
 - Toda leitura/escrita de dados financeiros passa por `requireSession()` /
   `requireUserId()` (`lib/auth/guards.ts`) e filtra explicitamente por
-  `userId` no banco — auditado manualmente em todas as 31 server actions do
+  `userId` no banco — auditado manualmente em todas as 38 server actions do
   projeto (`lib/actions/*.ts`), sem exceção.
 - `proxy.ts` só faz uma checagem rápida de cookie para redirecionar a UI de
   visitantes anônimos (confirmado por `tests/e2e/login.spec.ts`); a
@@ -155,9 +160,11 @@ arquivos/extratos.
 
 ## Limitações conhecidas
 
-- Sem importação de extratos, Open Finance, recorrências, parcelamento de
-  cartão, metas financeiras, exportação CSV/OFX, notificações de vencimento
-  ou tema escuro (fora do escopo da v1 — ver `todo.md`).
+- Sem importação de extratos, Open Finance, parcelamento de cartão, metas
+  financeiras, exportação CSV/OFX, notificações de vencimento ou tema
+  escuro (fora do escopo da v1 — ver `todo.md`). Despesas fixas
+  recorrentes existem (ver acima), mas só para despesas — sem receita
+  recorrente (ex: salário) por enquanto.
 - Usuário único: o app não foi desenhado para múltiplas contas/pessoas na
   mesma carteira. Por isso, o isolamento por usuário foi verificado por
   auditoria de código (todo `select`/`update`/`delete` filtra por `userId`)
@@ -166,8 +173,9 @@ arquivos/extratos.
   specs Playwright de `accounts`/`receita-despesa`/`outros`/`cartoes`/
   `relatorios`/`orcamentos` ainda não existem — a cobertura desses fluxos
   hoje é: testes unitários das regras de negócio puras (dinheiro, datas,
-  ciclo de fatura, rollup de orçamento — 29 testes) + verificação manual
-  extensiva no navegador, documentada fase a fase em `todo.md`.
+  ciclo de fatura, rollup de orçamento, despesas fixas — 42 testes) +
+  verificação manual extensiva no navegador, documentada fase a fase em
+  `todo.md`.
 - `pnpm run test:e2e` roda com 1 worker (não paralelo): o Turso é
   single-writer e logins simultâneos de vários workers colidem na escrita
   da sessão — nunca acontece no uso real, de usuário único.

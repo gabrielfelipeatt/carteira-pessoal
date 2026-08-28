@@ -211,6 +211,65 @@ export const creditCardStatements = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
+// Despesas fixas recorrentes
+// ---------------------------------------------------------------------------
+
+export const fixedExpenses = sqliteTable(
+  "fixed_expenses",
+  {
+    id: id(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    description: text("description").notNull(),
+    categoryId: text("category_id")
+      .notNull()
+      .references(() => categories.id, { onDelete: "restrict" }),
+    amountCents: integer("amount_cents").notNull(),
+    // 1-31, clampado para o último dia do mês quando o mês é mais curto.
+    dayOfMonth: integer("day_of_month").notNull(),
+    paymentMethodId: text("payment_method_id")
+      .notNull()
+      .references(() => paymentMethods.id, { onDelete: "restrict" }),
+    creditCardId: text("credit_card_id").references(() => creditCards.id, {
+      onDelete: "restrict",
+    }),
+    accountId: text("account_id").references(() => accounts.id, {
+      onDelete: "restrict",
+    }),
+    startMonth: text("start_month").notNull(), // 'YYYY-MM'
+    endMonth: text("end_month"), // 'YYYY-MM', inclusive; null = sem data final
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    notes: text("notes"),
+    ...timestamps,
+  },
+  (table) => [index("fixed_expenses_user_id_idx").on(table.userId)],
+);
+
+export const fixedExpenseSkips = sqliteTable(
+  "fixed_expense_skips",
+  {
+    id: id(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    // Diferente do resto do schema: cascade, não restrict — um registro de
+    // "dispensei este mês" não tem sentido nenhum sem o modelo pai.
+    fixedExpenseId: text("fixed_expense_id")
+      .notNull()
+      .references(() => fixedExpenses.id, { onDelete: "cascade" }),
+    competencia: text("competencia").notNull(), // 'YYYY-MM'
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("fixed_expense_skips_fixed_expense_id_competencia_unique").on(
+      table.fixedExpenseId,
+      table.competencia,
+    ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Lançamentos
 // ---------------------------------------------------------------------------
 
@@ -248,6 +307,15 @@ export const transactions = sqliteTable(
     notes: text("notes"),
     // Liga as duas pontas de uma transferência (sempre exatamente 2 linhas).
     transferGroupId: text("transfer_group_id"),
+    // Preenchidos só quando esta linha foi gerada a partir da confirmação
+    // de uma despesa fixa recorrente — nunca tocados numa edição normal.
+    fixedExpenseId: text("fixed_expense_id").references(() => fixedExpenses.id, {
+      onDelete: "restrict",
+    }),
+    // 'YYYY-MM' — guardado explicitamente no momento da geração, nunca
+    // recalculado a partir de `occurredAt` (editar a data depois não pode
+    // fazer a competência "sumir" e voltar a aparecer como pendente).
+    competencia: text("competencia"),
     ...timestamps,
   },
   (table) => [
@@ -259,6 +327,7 @@ export const transactions = sqliteTable(
     index("transactions_category_id_idx").on(table.categoryId),
     index("transactions_statement_id_idx").on(table.statementId),
     index("transactions_transfer_group_id_idx").on(table.transferGroupId),
+    index("transactions_fixed_expense_id_idx").on(table.fixedExpenseId),
   ],
 );
 

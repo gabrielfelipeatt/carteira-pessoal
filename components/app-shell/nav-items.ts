@@ -15,6 +15,7 @@ export const primaryNavItems = [
 
 export const moreMenuItems = [
   { href: "/orcamentos", label: "Orçamentos" },
+  { href: "/despesas-fixas", label: "Despesas fixas" },
   { href: "/categorias", label: "Categorias" },
   { href: "/configuracoes", label: "Configurações" },
 ] as const;

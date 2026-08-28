@@ -4,6 +4,24 @@ Todas as alterações relevantes deste projeto são documentadas neste arquivo.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/) e o
 versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.3.0] - 2026-08-28
+
+### Adicionado
+- Despesas fixas recorrentes (`/despesas-fixas`, acessível pelo menu
+  "Mais"): cadastre uma conta recorrente (luz, água, internet...) uma
+  única vez — descrição, categoria, forma de pagamento, valor sugerido,
+  dia do mês, mês inicial e, opcionalmente, mês final — e confirme o
+  lançamento de cada mês manualmente, sem digitar tudo de novo. Nenhum
+  lançamento é criado sozinho: cada competência pendente é calculada em
+  tempo real (sem cron/job em background) e exige clique explícito em
+  "Confirmar" (abre o formulário de despesa pré-preenchido e editável) ou
+  "Dispensar" (pula aquele mês sem gerar lançamento nem desativar o
+  cadastro). `/lancamentos` mostra um aviso quando há despesas fixas
+  pendentes no mês.
+- Suporta despesa fixa paga tanto por conta (débito/pix/boleto/etc.)
+  quanto por cartão de crédito — nesse caso reaproveita a mesma resolução
+  de fatura/conta de controle das despesas manuais, sem duplicar lógica.
+
 ## [0.2.1] - 2026-08-28
 
 ### Corrigido
