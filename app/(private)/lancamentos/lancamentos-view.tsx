@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/finance/states";
 import { AccountList } from "@/components/finance/account-list";
 import { AccountForm } from "@/components/finance/account-form";
-import { IncomeExpenseForm } from "@/components/finance/income-expense-form";
+import { IncomeForm } from "@/components/finance/income-form";
+import { ExpenseForm } from "@/components/finance/expense-form";
 import { TransferForm } from "@/components/finance/transfer-form";
 import { AdjustmentForm } from "@/components/finance/adjustment-form";
 import { OutrosSheet } from "@/components/finance/outros-sheet";
@@ -19,12 +20,14 @@ import {
 import type {
   accounts as accountsTable,
   categories as categoriesTable,
+  creditCards as creditCardsTable,
   paymentMethods as paymentMethodsTable,
 } from "@/db/schema";
 
 type Account = typeof accountsTable.$inferSelect & { currentBalanceCents: number };
 type Category = typeof categoriesTable.$inferSelect;
 type PaymentMethod = typeof paymentMethodsTable.$inferSelect;
+type CreditCard = typeof creditCardsTable.$inferSelect;
 
 type Dialog =
   | { kind: "none" }
@@ -39,11 +42,13 @@ export function LancamentosView({
   accounts,
   categories,
   paymentMethods,
+  creditCards,
   transactions,
 }: {
   accounts: Account[];
   categories: Category[];
   paymentMethods: PaymentMethod[];
+  creditCards: CreditCard[];
   transactions: TransactionListItem[];
 }) {
   const router = useRouter();
@@ -171,8 +176,7 @@ export function LancamentosView({
       ) : null}
 
       {dialog.kind === "income" ? (
-        <IncomeExpenseForm
-          type="income"
+        <IncomeForm
           open
           accounts={accounts}
           categories={categories}
@@ -184,12 +188,12 @@ export function LancamentosView({
       ) : null}
 
       {dialog.kind === "expense" ? (
-        <IncomeExpenseForm
-          type="expense"
+        <ExpenseForm
           open
           accounts={accounts}
           categories={categories}
           paymentMethods={paymentMethods}
+          creditCards={creditCards}
           editing={dialog.editing}
           onOpenChange={(open) => !open && setDialog({ kind: "none" })}
           onSaved={refresh}

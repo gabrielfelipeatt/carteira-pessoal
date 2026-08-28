@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeftRight, Pencil, Scale, Trash2 } from "lucide-react";
+import { ArrowLeftRight, CreditCard, Pencil, Scale, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -35,6 +35,9 @@ export type TransactionListItem = {
   categoryName: string | null;
   paymentMethodId: string | null;
   paymentMethodName: string | null;
+  creditCardId: string | null;
+  creditCardNickname: string | null;
+  statementId: string | null;
 };
 
 export type EditPayload =
@@ -59,6 +62,7 @@ export type EditPayload =
       occurredAt: Date;
       description: string;
       notes: string | null;
+      creditCardId: string | null;
     }
   | {
       kind: "adjustment";
@@ -237,6 +241,8 @@ export function TransactionList({
 
         const transaction = row.item;
         const isAdjustment = transaction.type === "adjustment";
+        const isStatementPayment = transaction.type === "transfer" && !!transaction.statementId;
+        const isCreditExpense = transaction.type === "expense" && !!transaction.creditCardId;
 
         return (
           <li key={row.key} className="flex items-center gap-3 px-4 py-3">
@@ -245,13 +251,23 @@ export function TransactionList({
                 <Scale className="size-4" aria-hidden />
               </div>
             ) : null}
+            {isStatementPayment || isCreditExpense ? (
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <CreditCard className="size-4" aria-hidden />
+              </div>
+            ) : null}
 
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-foreground">
-                {transaction.description}
+                {isStatementPayment
+                  ? `Pagamento de fatura — ${transaction.creditCardNickname ?? ""}`
+                  : transaction.description}
               </p>
               <p className="truncate text-xs text-muted-foreground">
-                {formatDateShort(transaction.occurredAt)} · {transaction.accountName}
+                {formatDateShort(transaction.occurredAt)} ·{" "}
+                {isCreditExpense
+                  ? transaction.creditCardNickname
+                  : transaction.accountName}
                 {transaction.categoryName ? ` · ${transaction.categoryName}` : ""}
               </p>
             </div>
@@ -265,14 +281,15 @@ export function TransactionList({
               className="shrink-0 text-sm"
             />
 
+            {isStatementPayment ? null : (
             <Button
               variant="ghost"
               size="icon-sm"
               aria-label="Editar lançamento"
               onClick={() => {
-                if (transaction.type === "income" || transaction.type === "expense") {
+                if (transaction.type === "income") {
                   onEdit({
-                    kind: transaction.type,
+                    kind: "income",
                     id: transaction.id,
                     accountId: transaction.accountId,
                     categoryId: transaction.categoryId,
@@ -281,6 +298,19 @@ export function TransactionList({
                     occurredAt: transaction.occurredAt,
                     description: transaction.description,
                     notes: transaction.notes,
+                  });
+                } else if (transaction.type === "expense") {
+                  onEdit({
+                    kind: "expense",
+                    id: transaction.id,
+                    accountId: transaction.accountId,
+                    categoryId: transaction.categoryId,
+                    paymentMethodId: transaction.paymentMethodId,
+                    amountCents: transaction.amountCents,
+                    occurredAt: transaction.occurredAt,
+                    description: transaction.description,
+                    notes: transaction.notes,
+                    creditCardId: transaction.creditCardId,
                   });
                 } else if (transaction.type === "adjustment") {
                   onEdit({
@@ -298,6 +328,7 @@ export function TransactionList({
             >
               <Pencil className="size-4" aria-hidden />
             </Button>
+            )}
 
             <AlertDialog>
               <AlertDialogTrigger

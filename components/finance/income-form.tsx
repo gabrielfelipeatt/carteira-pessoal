@@ -18,13 +18,8 @@ import { DateField } from "@/components/finance/date-field";
 import { AccountSelect } from "@/components/finance/account-select";
 import { CategorySelect } from "@/components/finance/category-select";
 import { PaymentMethodSelect } from "@/components/finance/payment-method-select";
-import { saveIncome, saveExpense } from "@/lib/actions/transactions";
-import {
-  incomeFormSchema,
-  expenseFormSchema,
-  type IncomeFormInput,
-  type ExpenseFormInput,
-} from "@/lib/validation/transactions";
+import { saveIncome } from "@/lib/actions/transactions";
+import { incomeFormSchema, type IncomeFormInput } from "@/lib/validation/transactions";
 import type {
   accounts as accountsTable,
   categories as categoriesTable,
@@ -40,8 +35,7 @@ function todayLocalDateString() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export function IncomeExpenseForm({
-  type,
+export function IncomeForm({
   open,
   onOpenChange,
   accounts,
@@ -50,7 +44,6 @@ export function IncomeExpenseForm({
   editing,
   onSaved,
 }: {
-  type: "income" | "expense";
   open: boolean;
   onOpenChange: (open: boolean) => void;
   accounts: Account[];
@@ -68,8 +61,6 @@ export function IncomeExpenseForm({
   };
   onSaved?: () => void;
 }) {
-  const schema = type === "income" ? incomeFormSchema : expenseFormSchema;
-
   const {
     register,
     handleSubmit,
@@ -77,8 +68,8 @@ export function IncomeExpenseForm({
     setValue,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<IncomeFormInput | ExpenseFormInput>({
-    resolver: zodResolver(schema),
+  } = useForm<IncomeFormInput>({
+    resolver: zodResolver(incomeFormSchema),
     defaultValues: editing
       ? {
           id: editing.id,
@@ -101,16 +92,10 @@ export function IncomeExpenseForm({
         },
   });
 
-  async function onSubmit(values: IncomeFormInput | ExpenseFormInput) {
+  async function onSubmit(values: IncomeFormInput) {
     try {
-      if (type === "income") {
-        await saveIncome(values);
-      } else {
-        await saveExpense(values);
-      }
-      toast.success(
-        type === "income" ? "Receita registrada." : "Despesa registrada.",
-      );
+      await saveIncome(values);
+      toast.success("Receita registrada.");
       reset();
       onOpenChange(false);
       onSaved?.();
@@ -121,25 +106,12 @@ export function IncomeExpenseForm({
     }
   }
 
-  const title =
-    type === "income"
-      ? editing
-        ? "Editar receita"
-        : "Nova receita"
-      : editing
-        ? "Editar despesa"
-        : "Nova despesa";
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm rounded-3xl">
         <DialogHeader>
-          <DialogTitle
-            className={
-              "font-heading " + (type === "income" ? "text-income" : "text-expense")
-            }
-          >
-            {title}
+          <DialogTitle className="font-heading text-income">
+            {editing ? "Editar receita" : "Nova receita"}
           </DialogTitle>
         </DialogHeader>
 
@@ -147,7 +119,7 @@ export function IncomeExpenseForm({
           <DateField label="Data" error={errors.date?.message} {...register("date")} />
 
           <AccountSelect
-            id={`${type}-account`}
+            id="income-account"
             label="Conta"
             accounts={accounts}
             value={watch("accountId")}
@@ -156,9 +128,9 @@ export function IncomeExpenseForm({
           />
 
           <CategorySelect
-            id={`${type}-category`}
+            id="income-category"
             label="Categoria"
-            kind={type}
+            kind="income"
             categories={categories}
             value={watch("categoryId")}
             onChange={(value) => setValue("categoryId", value)}
@@ -172,8 +144,8 @@ export function IncomeExpenseForm({
           />
 
           <PaymentMethodSelect
-            id={`${type}-payment-method`}
-            label={type === "income" ? "Forma de recebimento" : "Forma de pagamento"}
+            id="income-payment-method"
+            label="Forma de recebimento"
             paymentMethods={paymentMethods}
             value={watch("paymentMethodId")}
             onChange={(value) => setValue("paymentMethodId", value)}
@@ -181,9 +153,9 @@ export function IncomeExpenseForm({
           />
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor={`${type}-description`}>Descrição</Label>
+            <Label htmlFor="income-description">Descrição</Label>
             <Input
-              id={`${type}-description`}
+              id="income-description"
               className="h-11"
               aria-invalid={!!errors.description}
               {...register("description")}
@@ -194,16 +166,11 @@ export function IncomeExpenseForm({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor={`${type}-notes`}>Observações (opcional)</Label>
-            <Textarea id={`${type}-notes`} rows={2} {...register("notes")} />
+            <Label htmlFor="income-notes">Observações (opcional)</Label>
+            <Textarea id="income-notes" rows={2} {...register("notes")} />
           </div>
 
-          <Button
-            type="submit"
-            size="lg"
-            className="h-11 mt-2"
-            disabled={isSubmitting}
-          >
+          <Button type="submit" size="lg" className="h-11 mt-2" disabled={isSubmitting}>
             {isSubmitting ? "Salvando…" : "Salvar"}
           </Button>
         </form>

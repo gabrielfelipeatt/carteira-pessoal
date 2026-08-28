@@ -83,13 +83,44 @@ Checklist verificável por fase. Ver o plano completo em
 
 ## Fase 3 — Cartões e faturas
 
-- [ ] `lib/actions/credit-cards.ts` + CRUD de cartões
-- [ ] `lib/finance/statements.ts` (ciclo, fechamento, pagamento, limite
+- [x] `lib/actions/credit-cards.ts` (list/save/remove) + CRUD de cartões
+- [x] `lib/finance/statement-cycle.ts` (matemática pura do ciclo, testável) +
+      `lib/finance/statements.ts` (resolve/fecha/paga fatura, limite
       derivado)
-- [ ] `/cartoes` (lista + detalhe com fechar/pagar fatura)
-- [ ] Despesa com forma "crédito" vinculada a cartão/fatura
-- [ ] Testes: `statement-cycle`, `credit-card-statement`
-- [ ] E2E: `cartoes.spec.ts` (confirma que pagamento nunca duplica despesa)
+- [x] Conta de controle automática por cartão (`accounts.isControlAccount`) —
+      compra no crédito nunca afeta conta real, só o pagamento da fatura afeta
+- [x] `/cartoes` (lista) + `/cartoes/[id]` (detalhe com fechar/pagar fatura,
+      drill-down das compras de cada fatura)
+- [x] Despesa com forma "crédito" mostra seletor de cartão em vez de conta
+      (`components/finance/expense-form.tsx`)
+- [x] Compra em fatura já fechada é rejeitada; edição/remoção de compra em
+      fatura fechada é bloqueada; pagamento de fatura não pode ser removido
+      pelos lançamentos soltos
+- [x] `tests/unit/statement-cycle.test.ts` — 9 testes (fechamento no dia,
+      dia seguinte, meses curtos, ano bissexto, virada de ano)
+- [x] Testado manualmente de ponta a ponta no navegador: criar cartão,
+      comprar no crédito (conta real intacta), fechar fatura, pagar parcial,
+      pagar o restante (fatura vira "Paga", limite volta ao total), rejeitar
+      compra em fatura fechada, bloquear edição de compra em fatura fechada
+- [x] `pnpm run typecheck && pnpm run lint && pnpm run test:unit &&
+      pnpm run build && pnpm run test:e2e` verdes (24 testes unitários, 9 E2E)
+- [ ] Testes de integração automatizados (`credit-card-statement`) —
+      verificado manualmente no navegador, ainda sem suíte Vitest contra
+      banco de teste
+- [ ] E2E automatizado (`cartoes.spec.ts`) — verificado manualmente, ainda
+      sem specs Playwright
+
+### Bugs encontrados e corrigidos durante a Fase 3
+
+- O campo `isCredit` do formulário de despesa nunca era sincronizado com o
+  valor derivado da forma de pagamento escolhida — a validação do Zod
+  falhava silenciosamente (o campo de conta, onde o erro apareceria, nem
+  estava renderizado quando "crédito" estava selecionado). Corrigido com
+  `useEffect` sincronizando `setValue("isCredit", ...)`.
+- Datas de fatura (fechamento/vencimento) calculadas em UTC puro apareciam
+  um dia antes na tela, porque a exibição converte para o fuso do usuário.
+  Corrigido reinterpretando a data calculada como meia-noite no fuso do
+  usuário antes de salvar (`toStorageDate` em `lib/finance/statements.ts`).
 
 ## Fase 4 — Dashboard, relatórios e orçamento
 

@@ -16,12 +16,26 @@ export const incomeFormSchema = z.object({
 });
 export type IncomeFormInput = z.infer<typeof incomeFormSchema>;
 
-export const expenseFormSchema = z.object({
-  ...baseFields,
-  accountId: z.string().min(1, "Selecione uma conta."),
-  categoryId: z.string().min(1, "Selecione uma categoria."),
-  paymentMethodId: z.string().min(1, "Selecione a forma de pagamento."),
-});
+export const expenseFormSchema = z
+  .object({
+    ...baseFields,
+    // Obrigatório apenas quando a forma de pagamento não é "crédito" — uma
+    // compra no crédito é lançada na conta de controle do cartão, nunca em
+    // uma conta escolhida pelo usuário.
+    accountId: z.string().optional(),
+    categoryId: z.string().min(1, "Selecione uma categoria."),
+    paymentMethodId: z.string().min(1, "Selecione a forma de pagamento."),
+    isCredit: z.boolean(),
+    creditCardId: z.string().optional(),
+  })
+  .refine((data) => data.isCredit || !!data.accountId, {
+    message: "Selecione uma conta.",
+    path: ["accountId"],
+  })
+  .refine((data) => !data.isCredit || !!data.creditCardId, {
+    message: "Selecione um cartão.",
+    path: ["creditCardId"],
+  });
 export type ExpenseFormInput = z.infer<typeof expenseFormSchema>;
 
 export const transferFormSchema = z

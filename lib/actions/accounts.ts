@@ -13,7 +13,10 @@ export async function listAccounts() {
   const userId = await requireUserId();
 
   const [rows, deltas] = await Promise.all([
-    db.select().from(accounts).where(eq(accounts.userId, userId)),
+    db
+      .select()
+      .from(accounts)
+      .where(and(eq(accounts.userId, userId), eq(accounts.isControlAccount, false))),
     computeAccountBalanceDeltasByUser(userId),
   ]);
 

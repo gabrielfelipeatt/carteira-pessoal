@@ -80,6 +80,13 @@ export const accounts = sqliteTable(
     initialBalanceCents: integer("initial_balance_cents").notNull().default(0),
     color: text("color").notNull().default("#1B4DD1"),
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    // Conta interna criada automaticamente para cada cartão de crédito —
+    // nunca aparece nos seletores nem no saldo consolidado. Compras no
+    // crédito são lançadas nela (não em uma conta real) para que o saldo
+    // real só seja afetado quando a fatura for paga — nunca na compra.
+    isControlAccount: integer("is_control_account", { mode: "boolean" })
+      .notNull()
+      .default(false),
     ...timestamps,
   },
   (table) => [index("accounts_user_id_idx").on(table.userId)],
@@ -158,6 +165,11 @@ export const creditCards = sqliteTable(
     dueDay: integer("due_day").notNull(),
     status: text("status").notNull().$type<CreditCardStatus>().default("active"),
     color: text("color").notNull().default("#1B4DD1"),
+    // Conta de controle interna (accounts.isControlAccount = true) onde as
+    // compras deste cartão são lançadas — nunca uma conta real do usuário.
+    controlAccountId: text("control_account_id").references(() => accounts.id, {
+      onDelete: "restrict",
+    }),
     ...timestamps,
   },
   (table) => [index("credit_cards_user_id_idx").on(table.userId)],

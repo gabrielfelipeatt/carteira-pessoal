@@ -15,6 +15,13 @@
       "when": 1787918443273,
       "tag": "0001_wise_luminals",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787921943108,
+      "tag": "0002_sleepy_carlie_cooper",
+      "breakpoints": true
     }
   ]
 }
