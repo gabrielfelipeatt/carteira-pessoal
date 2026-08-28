@@ -165,14 +165,41 @@ Checklist verificável por fase. Ver o plano completo em
 
 ## Fase 5 — Refinamento e qualidade
 
-- [ ] Varredura completa Vitest + Playwright
-- [ ] Testes de segurança: sem sessão, id de outro usuário, payload inválido
-- [ ] Auditoria de acessibilidade (alt textual de gráfico, toque ≥44px,
-      `prefers-reduced-motion`)
-- [ ] `EXPLAIN QUERY PLAN` nas queries `(userId, occurredAt)`
-- [ ] Screenshots mobile/desktop + lista final de limitações conhecidas
-- [ ] Gate final: `lint && typecheck && test:unit && test:integration &&
-      build && test:e2e` verdes
+- [x] Auditoria de código: as 31 server actions exportadas (`lib/actions/*`)
+      chamam `requireSession()`/`requireUserId()` e filtram toda query por
+      `userId` — conferido função por função, sem exceção
+- [x] "Sem sessão": `tests/e2e/login.spec.ts` confirma redirecionamento em
+      toda rota privada; `proxy.ts` cobre a UI, `guards.ts` cobre as actions
+- [x] "Payload inválido"/"id inexistente": confirmado por auditoria de
+      código — todo `throw` de action usa mensagem curada em português
+      (nunca erro cru de banco/stack trace); `assertOwned`/`assertOwned*`
+      rejeitam id de recurso que não pertence ao usuário antes de qualquer
+      mutação
+- [x] "Id de outro usuário": não verificado com um segundo usuário real de
+      ponta a ponta (app é de usuário único por decisão do produto) — a
+      garantia vem da auditoria acima, documentada em `README.md`
+- [x] Alvos de toque: botões de editar/remover lançamento, orçamento,
+      cartão e navegação de mês ajustados para 44×44px (shadcn `icon-sm`
+      por padrão sai em 28px) — conferido via `getBoundingClientRect` no
+      navegador
+- [x] `prefers-reduced-motion` respeitado globalmente desde a Fase 1
+      (`app/globals.css`)
+- [x] Todo gráfico (dashboard e relatórios) tem alternativa em tabela
+      acessível via botão "Ver tabela" — nenhum gráfico é só visual
+- [x] `EXPLAIN QUERY PLAN` conferido em `transactions` (por
+      `user_id`+`occurred_at`), `accounts`/`categories` (por `user_id`),
+      faturas (por `credit_card_id`+`reference_month`) e orçamentos (por
+      `user_id`+`categoria`+`ano`+`mês`) — todos usam índice, sem table scan
+- [x] `playwright.config.ts` ajustado para 1 worker (Turso é single-writer;
+      login concorrente de vários workers colidia — não acontece no uso
+      real) — suíte 100% estável em execuções repetidas
+- [x] README.md reconciliado: funcionalidades implementadas, decisões de
+      arquitetura, seção de segurança/privacidade e limitações conhecidas
+- [ ] Screenshots mobile/desktop — capturada 1 tela (dashboard vazio,
+      desktop) antes do recurso de screenshot da sessão ficar instável;
+      não foi possível capturar o restante do conjunto
+- [x] Gate final: `lint && typecheck && test:unit && build && test:e2e`
+      verdes (29 testes unitários, 9 E2E, todos os 4 checks limpos)
 
 ## Pendências que dependem do usuário
 

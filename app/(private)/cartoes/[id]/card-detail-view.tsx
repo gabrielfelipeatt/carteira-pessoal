@@ -44,6 +44,7 @@ export function CardDetailView({
         <Button
           variant="ghost"
           size="icon-sm"
+          className="size-11"
           nativeButton={false}
           render={
             <Link href="/cartoes" aria-label="Voltar">
@@ -59,7 +60,13 @@ export function CardDetailView({
             Fecha dia {card.closingDay} · vence dia {card.dueDay}
           </p>
         </div>
-        <Button variant="ghost" size="icon-sm" aria-label="Editar cartão" onClick={() => setEditOpen(true)}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="size-11"
+          aria-label="Editar cartão"
+          onClick={() => setEditOpen(true)}
+        >
           <Pencil className="size-4" aria-hidden />
         </Button>
       </div>

@@ -64,7 +64,13 @@ export function BudgetProgress({
           <p className="text-xs text-muted-foreground">{statusLabels[budget.status]}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <Button variant="ghost" size="icon-sm" aria-label="Editar orçamento" onClick={onEdit}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="size-11"
+            aria-label="Editar orçamento"
+            onClick={onEdit}
+          >
             <Pencil className="size-4" aria-hidden />
           </Button>
           <AlertDialog>
@@ -74,7 +80,7 @@ export function BudgetProgress({
                   variant="ghost"
                   size="icon-sm"
                   aria-label="Remover orçamento"
-                  className="text-destructive hover:text-destructive"
+                  className="size-11 text-destructive hover:text-destructive"
                 >
                   <Trash2 className="size-4" aria-hidden />
                 </Button>

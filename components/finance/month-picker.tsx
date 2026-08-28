@@ -26,6 +26,7 @@ export function MonthPicker({
       <Button
         variant="ghost"
         size="icon-sm"
+        className="size-11"
         aria-label="Mês anterior"
         onClick={() => router.push(`${basePath}?mes=${previousYearMonth(yearMonth)}`)}
       >
@@ -37,6 +38,7 @@ export function MonthPicker({
       <Button
         variant="ghost"
         size="icon-sm"
+        className="size-11"
         aria-label="Próximo mês"
         onClick={() => router.push(`${basePath}?mes=${nextYearMonth(yearMonth)}`)}
       >

@@ -10,6 +10,27 @@ Vitest + Playwright.
 Todos os lançamentos são preenchidos manualmente — o app não recebe upload de
 arquivos/extratos.
 
+## Funcionalidades implementadas
+
+- **Contas**: corrente, poupança, dinheiro, investimento, outra — saldo
+  sempre derivado das transações (nunca um contador solto)
+- **Lançamentos**: receita, despesa, transferência (grupo atômico de 2
+  pontas) e ajuste de saldo, com edição e remoção
+- **Cartões de crédito**: ciclo de fatura calculado a partir do dia de
+  fechamento/vencimento, fechamento explícito, pagamento total/parcial,
+  limite disponível sempre derivado — compra no crédito nunca afeta uma
+  conta real (usa uma conta de controle interna por cartão), só o pagamento
+  da fatura afeta o saldo real
+- **Categorias e formas de pagamento**: estrutura sugerida do PRD ou
+  personalizada, com subcategorias
+- **Dashboard mensal**: saldo consolidado, entradas/saídas, resultado,
+  comparação com o mês anterior, gastos por categoria
+- **Relatórios**: filtros por período/conta/categoria/tipo/forma de
+  pagamento, gráficos de gastos por categoria, receitas/despesas no tempo e
+  evolução do saldo — todos com alternativa em tabela acessível
+- **Orçamentos**: limite mensal por categoria, com rollup automático de
+  subcategorias na categoria-pai e status normal/atenção/acima do limite
+
 ## Pré-requisitos
 
 - Node.js 22+
@@ -112,10 +133,41 @@ arquivos/extratos.
   Transferências entre contas próprias nunca contam como entrada/saída nos
   relatórios/dashboard — ver `lib/finance/aggregation.ts`.
 
+## Segurança e privacidade
+
+- Toda leitura/escrita de dados financeiros passa por `requireSession()` /
+  `requireUserId()` (`lib/auth/guards.ts`) e filtra explicitamente por
+  `userId` no banco — auditado manualmente em todas as 31 server actions do
+  projeto (`lib/actions/*.ts`), sem exceção.
+- `proxy.ts` só faz uma checagem rápida de cookie para redirecionar a UI de
+  visitantes anônimos (confirmado por `tests/e2e/login.spec.ts`); a
+  autorização real está na camada de dados, não no roteamento.
+- Mensagens de erro voltadas ao usuário são sempre textos curados em
+  português (ex: "Conta não encontrada.") — nunca stack trace ou erro cru do
+  banco.
+- Índices conferidos com `EXPLAIN QUERY PLAN` nos caminhos mais usados
+  (`transactions` por `user_id`+`occurred_at`, `accounts`/`categories` por
+  `user_id`, faturas por cartão+mês, orçamentos por usuário+categoria+mês) —
+  todos usam índice, nenhum table scan.
+- Alvos de toque de ações primárias (editar/remover lançamento, navegar
+  mês) em 44×44px conforme o PRD; `prefers-reduced-motion` respeitado
+  globalmente (`app/globals.css`).
+
 ## Limitações conhecidas
 
 - Sem importação de extratos, Open Finance, recorrências, parcelamento de
   cartão, metas financeiras, exportação CSV/OFX, notificações de vencimento
   ou tema escuro (fora do escopo da v1 — ver `todo.md`).
 - Usuário único: o app não foi desenhado para múltiplas contas/pessoas na
-  mesma carteira.
+  mesma carteira. Por isso, o isolamento por usuário foi verificado por
+  auditoria de código (todo `select`/`update`/`delete` filtra por `userId`)
+  em vez de um teste automatizado com dois usuários reais.
+- Testes de integração automatizados (Vitest contra um banco de teste) e
+  specs Playwright de `accounts`/`receita-despesa`/`outros`/`cartoes`/
+  `relatorios`/`orcamentos` ainda não existem — a cobertura desses fluxos
+  hoje é: testes unitários das regras de negócio puras (dinheiro, datas,
+  ciclo de fatura, rollup de orçamento — 29 testes) + verificação manual
+  extensiva no navegador, documentada fase a fase em `todo.md`.
+- `pnpm run test:e2e` roda com 1 worker (não paralelo): o Turso é
+  single-writer e logins simultâneos de vários workers colidem na escrita
+  da sessão — nunca acontece no uso real, de usuário único.

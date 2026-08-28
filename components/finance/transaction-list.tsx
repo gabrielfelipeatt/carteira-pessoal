@@ -186,6 +186,7 @@ export function TransactionList({
               <Button
                 variant="ghost"
                 size="icon-sm"
+                className="size-11"
                 aria-label="Editar transferência"
                 onClick={() =>
                   onEdit({
@@ -210,7 +211,7 @@ export function TransactionList({
                       variant="ghost"
                       size="icon-sm"
                       aria-label="Remover transferência"
-                      className="text-destructive hover:text-destructive"
+                      className="size-11 text-destructive hover:text-destructive"
                     >
                       <Trash2 className="size-4" aria-hidden />
                     </Button>
@@ -285,6 +286,7 @@ export function TransactionList({
             <Button
               variant="ghost"
               size="icon-sm"
+              className="size-11"
               aria-label="Editar lançamento"
               onClick={() => {
                 if (transaction.type === "income") {
@@ -337,7 +339,7 @@ export function TransactionList({
                     variant="ghost"
                     size="icon-sm"
                     aria-label="Remover lançamento"
-                    className="text-destructive hover:text-destructive"
+                    className="size-11 text-destructive hover:text-destructive"
                   >
                     <Trash2 className="size-4" aria-hidden />
                   </Button>
