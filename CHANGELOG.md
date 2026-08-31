@@ -4,6 +4,84 @@ Todas as alterações relevantes deste projeto são documentadas neste arquivo.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/) e o
 versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.7.1] - 2026-08-31
+
+### Alterado
+- Favicon próprio (`app/icon.svg`) no lugar do ícone padrão do Next.js —
+  uma carteira nas mesmas cores já usadas no app (azul cobalto, marfim,
+  âmbar). Convenção nativa do App Router, sem precisar mexer em
+  `layout.tsx`; `favicon.ico` padrão mantido como reserva para navegadores
+  muito antigos.
+
+## [0.7.0] - 2026-08-31
+
+### Adicionado
+- Metas financeiras (`/metas`, no menu "Mais"): objetivo de economia com
+  nome, valor-alvo, mês-alvo opcional e cor própria. Progresso nunca é um
+  contador armazenado — é sempre a soma assinada dos aportes/resgates
+  vinculados (`lib/actions/goals.ts`). Aporte/resgate é uma transação de
+  uma linha só (`type:'transfer'`, sem `transferGroupId`), mesmo padrão
+  já usado no pagamento de fatura — por isso nunca conta como
+  receita/despesa nos relatórios/orçamentos. Resgate nunca pode exceder o
+  progresso atual da meta. Remover uma meta é bloqueado se ela já tiver
+  histórico (mesma regra de despesas fixas); pausar continua possível.
+  Um aporte/resgate aparece no histórico de lançamentos com ícone
+  próprio e só pode ser removido (não editado) — mesmo tratamento que
+  pagamento de fatura já recebe.
+- `lib/finance/goals.ts` (novo, lógica pura): `computeGoalStatus` — status
+  ("no prazo"/"atrasada"/"concluída") sempre derivado na leitura, nunca
+  armazenado, mesmo princípio do status "vencida" de fatura.
+
+## [0.6.0] - 2026-08-31
+
+### Adicionado
+- Parcelamento de compra no cartão de crédito: ao marcar "Parcelar
+  compra" numa despesa no cartão, gera N lançamentos independentes — um
+  por fatura futura (criada sob demanda, como já acontecia para uma
+  compra normal), cada um com a fração exata do valor (a sobra da divisão
+  vai pra última parcela) e o mesmo dia do mês da compra original,
+  clampado corretamente em mês curto. Exibido como "Parcela N/total" no
+  histórico de lançamentos. Cada parcela é removida individualmente (sem
+  afetar as outras); parcela em fatura já fechada não pode ser removida,
+  mesma regra que já existia para compra avulsa. Só disponível pra
+  lançamento novo — uma edição nunca divide retroativamente.
+- `lib/finance/installments.ts` (novo, lógica pura): `splitIntoInstallments`
+  e `resolveInstallmentDates` — este último compõe as funções já
+  existentes `nextYearMonth`/`resolveOccurrenceDateString` em vez de
+  somar meses via aritmética de `Date`, que quebra em mês curto.
+
+## [0.5.0] - 2026-08-31
+
+### Adicionado
+- Avisos no dashboard (Início): faturas a vencer/vencidas (próximos 5
+  dias, ou já vencidas) e lançamentos fixos pendentes, combinados num
+  único feed ordenado por urgência (`lib/finance/reminders.ts`). Sem
+  tabela nova nem cron — reaproveita `computeEffectiveStatus`/
+  `computeStatementOwedCents` (faturas) e `listPendingFixedExpenseOccurrences`
+  (lançamentos fixos), ambos já existentes.
+- Removido o aviso duplicado de despesas fixas pendentes que ficava em
+  `/lancamentos` — o dashboard passa a ser o único lugar de avisos; a
+  seção "Pendentes" dentro de `/despesas-fixas` continua normalmente (ali
+  é ação, não aviso).
+
+### Corrigido
+- Uma fatura **aberta** com vencimento já passado aparecia nos avisos
+  como "vence hoje" em vez de vencida — `computeEffectiveStatus` só marca
+  "vencida" para faturas já fechadas, nunca abertas. O rótulo do aviso
+  agora se baseia direto em quantos dias já passaram do vencimento, não
+  no status armazenado.
+
+## [0.4.0] - 2026-08-31
+
+### Adicionado
+- Receita fixa recorrente: `/despesas-fixas` (renomeado para "Lançamentos
+  fixos" na interface) agora aceita tanto despesas quanto receitas
+  (salário, aluguel recebido...). Generaliza a tabela `fixedExpenses`
+  (adiciona coluna `type`) em vez de duplicar o mecanismo — a lógica de
+  cálculo de competências pendentes já era agnóstica de tipo. A
+  confirmação de uma ocorrência de receita abre o formulário de receita
+  pré-preenchido, mesmo padrão já usado para despesa.
+
 ## [0.3.0] - 2026-08-28
 
 ### Adicionado

@@ -69,7 +69,9 @@ export async function saveFixedExpense(input: FixedExpenseFormInput) {
   let creditCardId: string | null = null;
   let accountId: string | null = null;
 
-  if (parsed.isCredit) {
+  // Nunca confia em `isCredit` vindo do cliente quando o tipo é receita —
+  // receita fixa nunca é no cartão, mesmo que o payload tente forçar isso.
+  if (parsed.type === "expense" && parsed.isCredit) {
     if (!parsed.creditCardId) throw new Error("Selecione um cartão.");
     const [card] = await db
       .select({ id: creditCards.id })
@@ -89,6 +91,7 @@ export async function saveFixedExpense(input: FixedExpenseFormInput) {
 
   const values = {
     userId,
+    type: parsed.type,
     description: parsed.description,
     categoryId: parsed.categoryId,
     amountCents: parseBrlToCents(parsed.amount),
@@ -219,6 +222,7 @@ export async function listPendingFixedExpenseOccurrences() {
 
     return pending.map((competencia) => ({
       fixedExpenseId: template.id,
+      type: template.type,
       description: template.description,
       categoryId: template.categoryId,
       categoryName: categoryById.get(template.categoryId)?.name ?? "Categoria removida",

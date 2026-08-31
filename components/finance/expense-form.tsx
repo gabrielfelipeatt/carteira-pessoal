@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -131,6 +132,8 @@ export function ExpenseForm({
           },
   });
 
+  const [isInstallment, setIsInstallment] = useState(false);
+
   const paymentMethodId = watch("paymentMethodId");
   const isCredit = paymentMethods.find((m) => m.id === paymentMethodId)?.kind === "credito";
 
@@ -203,6 +206,43 @@ export function ExpenseForm({
               error={errors.accountId?.message}
             />
           )}
+
+          {isCredit && !editing ? (
+            <>
+              <div className="flex items-center justify-between rounded-xl border border-border px-3 py-2.5">
+                <Label htmlFor="expense-installment" className="text-sm">
+                  Parcelar compra
+                </Label>
+                <Switch
+                  id="expense-installment"
+                  checked={isInstallment}
+                  onCheckedChange={(checked) => {
+                    setIsInstallment(checked);
+                    setValue("installmentCount", checked ? 2 : undefined);
+                  }}
+                />
+              </div>
+              {isInstallment ? (
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="expense-installment-count">Número de parcelas</Label>
+                  <Input
+                    id="expense-installment-count"
+                    type="number"
+                    min={2}
+                    max={48}
+                    className="h-11"
+                    aria-invalid={!!errors.installmentCount}
+                    {...register("installmentCount", { valueAsNumber: true })}
+                  />
+                  {errors.installmentCount ? (
+                    <p className="text-sm text-destructive">
+                      {errors.installmentCount.message}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </>
+          ) : null}
 
           <CategorySelect
             id="expense-category"

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeftRight, CreditCard, Pencil, Scale, Trash2 } from "lucide-react";
+import { ArrowLeftRight, CreditCard, Pencil, PiggyBank, Scale, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -38,6 +38,10 @@ export type TransactionListItem = {
   creditCardId: string | null;
   creditCardNickname: string | null;
   statementId: string | null;
+  installmentNumber: number | null;
+  installmentTotal: number | null;
+  goalId: string | null;
+  goalName: string | null;
 };
 
 export type EditPayload =
@@ -244,6 +248,7 @@ export function TransactionList({
         const isAdjustment = transaction.type === "adjustment";
         const isStatementPayment = transaction.type === "transfer" && !!transaction.statementId;
         const isCreditExpense = transaction.type === "expense" && !!transaction.creditCardId;
+        const isGoalContribution = transaction.type === "transfer" && !!transaction.goalId;
 
         return (
           <li key={row.key} className="flex items-center gap-3 px-4 py-3">
@@ -255,6 +260,11 @@ export function TransactionList({
             {isStatementPayment || isCreditExpense ? (
               <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                 <CreditCard className="size-4" aria-hidden />
+              </div>
+            ) : null}
+            {isGoalContribution ? (
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <PiggyBank className="size-4" aria-hidden />
               </div>
             ) : null}
 
@@ -270,6 +280,9 @@ export function TransactionList({
                   ? transaction.creditCardNickname
                   : transaction.accountName}
                 {transaction.categoryName ? ` · ${transaction.categoryName}` : ""}
+                {transaction.installmentNumber && transaction.installmentTotal
+                  ? ` · Parcela ${transaction.installmentNumber}/${transaction.installmentTotal}`
+                  : ""}
               </p>
             </div>
 
@@ -282,7 +295,7 @@ export function TransactionList({
               className="shrink-0 text-sm"
             />
 
-            {isStatementPayment ? null : (
+            {isStatementPayment || isGoalContribution ? null : (
             <Button
               variant="ghost"
               size="icon-sm"

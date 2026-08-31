@@ -42,6 +42,7 @@ export function IncomeForm({
   categories,
   paymentMethods,
   editing,
+  prefill,
   onSaved,
 }: {
   open: boolean;
@@ -58,6 +59,18 @@ export function IncomeForm({
     occurredAt: Date;
     description: string;
     notes: string | null;
+  };
+  /** Pré-preenche a confirmação de uma ocorrência de receita fixa — nunca
+   * usado junto com `editing` (aqui é sempre um lançamento novo). */
+  prefill?: {
+    fixedExpenseId: string;
+    competencia: string;
+    categoryId: string;
+    paymentMethodId: string;
+    accountId: string;
+    amountCents: number;
+    date: string;
+    description: string;
   };
   onSaved?: () => void;
 }) {
@@ -81,15 +94,27 @@ export function IncomeForm({
           categoryId: editing.categoryId ?? "",
           paymentMethodId: editing.paymentMethodId ?? "",
         }
-      : {
-          date: todayLocalDateString(),
-          amount: "",
-          description: "",
-          notes: "",
-          accountId: "",
-          categoryId: "",
-          paymentMethodId: "",
-        },
+      : prefill
+        ? {
+            date: prefill.date,
+            amount: (prefill.amountCents / 100).toFixed(2).replace(".", ","),
+            description: prefill.description,
+            notes: "",
+            accountId: prefill.accountId,
+            categoryId: prefill.categoryId,
+            paymentMethodId: prefill.paymentMethodId,
+            fixedExpenseId: prefill.fixedExpenseId,
+            competencia: prefill.competencia,
+          }
+        : {
+            date: todayLocalDateString(),
+            amount: "",
+            description: "",
+            notes: "",
+            accountId: "",
+            categoryId: "",
+            paymentMethodId: "",
+          },
   });
 
   async function onSubmit(values: IncomeFormInput) {
@@ -111,11 +136,18 @@ export function IncomeForm({
       <DialogContent className="max-w-sm rounded-3xl">
         <DialogHeader>
           <DialogTitle className="font-heading text-income">
-            {editing ? "Editar receita" : "Nova receita"}
+            {editing ? "Editar receita" : prefill ? "Confirmar receita fixa" : "Nova receita"}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+          {prefill ? (
+            <>
+              <input type="hidden" {...register("fixedExpenseId")} />
+              <input type="hidden" {...register("competencia")} />
+            </>
+          ) : null}
+
           <DateField label="Data" error={errors.date?.message} {...register("date")} />
 
           <AccountSelect

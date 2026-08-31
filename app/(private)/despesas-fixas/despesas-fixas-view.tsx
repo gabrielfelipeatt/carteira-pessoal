@@ -20,6 +20,7 @@ import {
 import { EmptyState } from "@/components/finance/states";
 import { MoneyText } from "@/components/finance/money-text";
 import { ExpenseForm } from "@/components/finance/expense-form";
+import { IncomeForm } from "@/components/finance/income-form";
 import { FixedExpenseForm } from "@/components/finance/fixed-expense-form";
 import {
   removeFixedExpense,
@@ -40,6 +41,7 @@ type CreditCard = typeof creditCardsTable.$inferSelect;
 
 type FixedExpense = {
   id: string;
+  type: "income" | "expense";
   description: string;
   categoryId: string;
   categoryName: string;
@@ -56,6 +58,7 @@ type FixedExpense = {
 
 type PendingOccurrence = {
   fixedExpenseId: string;
+  type: "income" | "expense";
   description: string;
   categoryId: string;
   categoryName: string;
@@ -65,6 +68,11 @@ type PendingOccurrence = {
   accountId: string | null;
   competencia: string;
   occurrenceDateString: string;
+};
+
+const typeLabels: Record<"income" | "expense", string> = {
+  income: "Receita",
+  expense: "Despesa",
 };
 
 type FormDialog = { open: false } | { open: true; editing?: FixedExpense };
@@ -95,11 +103,11 @@ export function DespesasFixasView({
   async function handleRemove(id: string) {
     try {
       await removeFixedExpense(id);
-      toast.success("Despesa fixa removida.");
+      toast.success("Lançamento fixo removido.");
       refresh();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Erro ao remover despesa fixa.",
+        error instanceof Error ? error.message : "Erro ao remover lançamento fixo.",
       );
     }
   }
@@ -119,10 +127,10 @@ export function DespesasFixasView({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-heading text-2xl font-semibold text-foreground">
-            Despesas fixas
+            Lançamentos fixos
           </h1>
           <p className="text-sm text-muted-foreground">
-            Contas recorrentes, como luz, água e internet.
+            Receitas e despesas recorrentes, como salário, luz, água e internet.
           </p>
         </div>
         {fixedExpenses.length > 0 ? (
@@ -140,11 +148,11 @@ export function DespesasFixasView({
       {fixedExpenses.length === 0 ? (
         <EmptyState
           icon={<Repeat className="size-8 text-muted-foreground" aria-hidden />}
-          title="Nenhuma despesa fixa cadastrada"
-          description="Cadastre uma conta recorrente uma única vez e confirme o lançamento todo mês, sem digitar tudo de novo."
+          title="Nenhum lançamento fixo cadastrado"
+          description="Cadastre uma receita ou despesa recorrente uma única vez e confirme o lançamento todo mês, sem digitar tudo de novo."
           action={
             <Button size="lg" className="h-11" onClick={() => setDialog({ open: true })}>
-              Criar despesa fixa
+              Criar lançamento fixo
             </Button>
           }
         />
@@ -162,16 +170,23 @@ export function DespesasFixasView({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">
-                        {occurrence.description}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {occurrence.description}
+                        </p>
+                        <Badge variant="secondary">{typeLabels[occurrence.type]}</Badge>
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {formatMonthLabel(occurrence.competencia)}
                       </p>
                     </div>
                     <MoneyText
-                      cents={occurrence.suggestedAmountCents}
-                      tone="neutral"
+                      cents={
+                        occurrence.type === "expense"
+                          ? -occurrence.suggestedAmountCents
+                          : occurrence.suggestedAmountCents
+                      }
+                      tone="auto"
                       className="shrink-0 text-sm"
                     />
                   </div>
@@ -230,6 +245,7 @@ export function DespesasFixasView({
                       <p className="truncate text-sm font-medium text-foreground">
                         {fixedExpense.description}
                       </p>
+                      <Badge variant="secondary">{typeLabels[fixedExpense.type]}</Badge>
                       {!fixedExpense.isActive ? (
                         <Badge variant="secondary">Pausada</Badge>
                       ) : null}
@@ -240,15 +256,19 @@ export function DespesasFixasView({
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
                     <MoneyText
-                      cents={fixedExpense.amountCents}
-                      tone="neutral"
+                      cents={
+                        fixedExpense.type === "expense"
+                          ? -fixedExpense.amountCents
+                          : fixedExpense.amountCents
+                      }
+                      tone="auto"
                       className="mr-1 text-sm"
                     />
                     <Button
                       variant="ghost"
                       size="icon-sm"
                       className="size-11"
-                      aria-label="Editar despesa fixa"
+                      aria-label="Editar lançamento fixo"
                       onClick={() => setDialog({ open: true, editing: fixedExpense })}
                     >
                       <Pencil className="size-4" aria-hidden />
@@ -259,7 +279,7 @@ export function DespesasFixasView({
                           <Button
                             variant="ghost"
                             size="icon-sm"
-                            aria-label="Remover despesa fixa"
+                            aria-label="Remover lançamento fixo"
                             className="size-11 text-destructive hover:text-destructive"
                           >
                             <Trash2 className="size-4" aria-hidden />
@@ -268,9 +288,9 @@ export function DespesasFixasView({
                       />
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Remover esta despesa fixa?</AlertDialogTitle>
+                          <AlertDialogTitle>Remover este lançamento fixo?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Só é possível remover uma despesa fixa sem
+                            Só é possível remover um lançamento fixo sem
                             lançamentos gerados. Essa ação não pode ser
                             desfeita.
                           </AlertDialogDescription>
@@ -304,7 +324,7 @@ export function DespesasFixasView({
         />
       ) : null}
 
-      {confirming ? (
+      {confirming && confirming.type === "expense" ? (
         <ExpenseForm
           open
           accounts={accounts}
@@ -318,6 +338,30 @@ export function DespesasFixasView({
             paymentMethodId: confirming.paymentMethodId,
             creditCardId: confirming.creditCardId,
             accountId: confirming.accountId,
+            amountCents: confirming.suggestedAmountCents,
+            date: confirming.occurrenceDateString,
+            description: confirming.description,
+          }}
+          onOpenChange={(open) => !open && setConfirming(null)}
+          onSaved={() => {
+            setConfirming(null);
+            refresh();
+          }}
+        />
+      ) : null}
+
+      {confirming && confirming.type === "income" ? (
+        <IncomeForm
+          open
+          accounts={accounts}
+          categories={categories}
+          paymentMethods={paymentMethods}
+          prefill={{
+            fixedExpenseId: confirming.fixedExpenseId,
+            competencia: confirming.competencia,
+            categoryId: confirming.categoryId,
+            paymentMethodId: confirming.paymentMethodId,
+            accountId: confirming.accountId ?? "",
             amountCents: confirming.suggestedAmountCents,
             date: confirming.occurrenceDateString,
             description: confirming.description,

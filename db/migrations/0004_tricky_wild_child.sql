@@ -1,0 +1,1 @@
+ALTER TABLE `fixed_expenses` ADD `type` text DEFAULT 'expense' NOT NULL;

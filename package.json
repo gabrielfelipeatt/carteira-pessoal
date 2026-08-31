@@ -1,6 +1,6 @@
 {
   "name": "carteira-pessoal",
-  "version": "0.3.0",
+  "version": "0.7.1",
   "private": true,
   "scripts": {
     "dev": "next dev",

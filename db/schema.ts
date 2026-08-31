@@ -43,6 +43,8 @@ export type Direction = "inflow" | "outflow";
 
 export type CategoryRuleSource = "manual" | "history" | "keyword";
 
+export type FixedExpenseType = "income" | "expense";
+
 // ---------------------------------------------------------------------------
 // Helpers de coluna
 // ---------------------------------------------------------------------------
@@ -222,6 +224,9 @@ export const fixedExpenses = sqliteTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     description: text("description").notNull(),
+    // "expense" (padrão, dados existentes) ou "income" — receita fixa
+    // reaproveita o mesmo mecanismo, nunca é no cartão.
+    type: text("type").notNull().$type<FixedExpenseType>().default("expense"),
     categoryId: text("category_id")
       .notNull()
       .references(() => categories.id, { onDelete: "restrict" }),
@@ -267,6 +272,28 @@ export const fixedExpenseSkips = sqliteTable(
       table.competencia,
     ),
   ],
+);
+
+// ---------------------------------------------------------------------------
+// Metas financeiras
+// ---------------------------------------------------------------------------
+
+export const goals = sqliteTable(
+  "goals",
+  {
+    id: id(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    targetCents: integer("target_cents").notNull(),
+    targetMonth: text("target_month"), // 'YYYY-MM', opcional
+    color: text("color").notNull().default("#1B4DD1"),
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    notes: text("notes"),
+    ...timestamps,
+  },
+  (table) => [index("goals_user_id_idx").on(table.userId)],
 );
 
 // ---------------------------------------------------------------------------
@@ -316,6 +343,17 @@ export const transactions = sqliteTable(
     // recalculado a partir de `occurredAt` (editar a data depois não pode
     // fazer a competência "sumir" e voltar a aparecer como pendente).
     competencia: text("competencia"),
+    // Liga as N parcelas de uma compra parcelada no cartão (cada parcela é
+    // uma linha independente, uma por fatura futura — nunca uma só linha
+    // com valor total).
+    installmentGroupId: text("installment_group_id"),
+    installmentNumber: integer("installment_number"),
+    installmentTotal: integer("installment_total"),
+    // Preenchido só num aporte/resgate de meta (sempre `type:'transfer'`,
+    // uma linha só, sem `transferGroupId` — não é transferência entre 2
+    // contas, é só o marcador de "esse dinheiro foi separado pra essa
+    // meta"). `direction` já diz se foi aporte (outflow) ou resgate (inflow).
+    goalId: text("goal_id").references(() => goals.id, { onDelete: "restrict" }),
     ...timestamps,
   },
   (table) => [
@@ -328,6 +366,8 @@ export const transactions = sqliteTable(
     index("transactions_statement_id_idx").on(table.statementId),
     index("transactions_transfer_group_id_idx").on(table.transferGroupId),
     index("transactions_fixed_expense_id_idx").on(table.fixedExpenseId),
+    index("transactions_installment_group_id_idx").on(table.installmentGroupId),
+    index("transactions_goal_id_idx").on(table.goalId),
   ],
 );
 

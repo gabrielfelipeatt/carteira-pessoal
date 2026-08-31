@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { ArrowDownCircle, ArrowUpCircle, Wallet } from "lucide-react";
+import {
+  ArrowDownCircle,
+  ArrowRight,
+  ArrowUpCircle,
+  CreditCard,
+  Repeat,
+  Wallet,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/finance/states";
 import { MoneyText } from "@/components/finance/money-text";
@@ -9,6 +16,20 @@ import { SpendByCategoryChart } from "@/components/finance/spend-by-category-cha
 import { formatDateShort } from "@/lib/finance/dates";
 import { getDashboardMonth } from "@/lib/actions/dashboard";
 import { currentYearMonth } from "@/lib/finance/dates";
+
+// Baseado só em `dueInDays`, nunca em `effectiveStatus` — uma fatura
+// aberta cujo vencimento já passou continua com status "open" (só
+// "closed" vira "overdue" em `computeEffectiveStatus`), mas ainda assim
+// está vencida do ponto de vista de "preciso pagar isso".
+function statementReminderLabel(dueInDays: number) {
+  if (dueInDays < 0) {
+    const days = Math.abs(dueInDays);
+    return days === 1 ? "Fatura venceu ontem" : `Fatura vencida há ${days} dias`;
+  }
+  if (dueInDays === 0) return "Fatura vence hoje";
+  if (dueInDays === 1) return "Fatura vence amanhã";
+  return `Fatura vence em ${dueInDays} dias`;
+}
 
 export default async function DashboardPage({
   searchParams,
@@ -84,6 +105,61 @@ export default async function DashboardPage({
               className="h-11 gap-1.5 bg-expense text-expense-foreground hover:bg-expense/90"
             />
           </div>
+
+          {data.reminders.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              <h2 className="font-heading text-sm font-semibold text-muted-foreground">
+                Avisos
+              </h2>
+              <div className="flex flex-col gap-2">
+                {data.reminders.map((reminder) =>
+                  reminder.kind === "statement" ? (
+                    <Link
+                      key={reminder.statementId}
+                      href={`/cartoes/${reminder.cardId}`}
+                      className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3"
+                    >
+                      <CreditCard
+                        className="size-5 shrink-0 text-muted-foreground"
+                        aria-hidden
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm text-foreground">
+                          {reminder.cardNickname} —{" "}
+                          {statementReminderLabel(reminder.dueInDays)}
+                        </p>
+                        <MoneyText
+                          cents={reminder.owedCents}
+                          tone="neutral"
+                          className="text-xs"
+                        />
+                      </div>
+                      <ArrowRight
+                        className="size-4 shrink-0 text-muted-foreground"
+                        aria-hidden
+                      />
+                    </Link>
+                  ) : (
+                    <Link
+                      key={`${reminder.fixedExpenseId}-${reminder.competencia}`}
+                      href="/despesas-fixas"
+                      className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3"
+                    >
+                      <Repeat className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+                      <span className="flex-1 truncate text-sm text-foreground">
+                        {reminder.type === "income" ? "Receita fixa" : "Despesa fixa"} pendente —{" "}
+                        {reminder.description}
+                      </span>
+                      <ArrowRight
+                        className="size-4 shrink-0 text-muted-foreground"
+                        aria-hidden
+                      />
+                    </Link>
+                  ),
+                )}
+              </div>
+            </div>
+          ) : null}
 
           <div className="flex flex-col gap-2">
             <h2 className="font-heading text-sm font-semibold text-muted-foreground">

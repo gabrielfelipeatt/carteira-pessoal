@@ -10,6 +10,7 @@ import {
   creditCards,
   fixedExpenseSkips,
   fixedExpenses,
+  goals,
   paymentMethods,
   transactions,
 } from "@/db/schema";
@@ -28,6 +29,7 @@ import { parseBrlToCents } from "@/lib/finance/money";
 import { localDateStringToUtcDate } from "@/lib/finance/dates";
 import { createTransfer, removeTransfer, updateTransfer } from "@/lib/finance/transfers";
 import { resolveStatementForPurchase } from "@/lib/finance/statements";
+import { resolveInstallmentDates, splitIntoInstallments } from "@/lib/finance/installments";
 
 export async function listTransactions() {
   const userId = await requireUserId();
@@ -51,6 +53,10 @@ export async function listTransactions() {
       creditCardId: transactions.creditCardId,
       creditCardNickname: creditCards.nickname,
       statementId: transactions.statementId,
+      installmentNumber: transactions.installmentNumber,
+      installmentTotal: transactions.installmentTotal,
+      goalId: transactions.goalId,
+      goalName: goals.name,
     })
     .from(transactions)
     .innerJoin(accounts, eq(transactions.accountId, accounts.id))
@@ -60,6 +66,7 @@ export async function listTransactions() {
       eq(transactions.customPaymentMethodId, paymentMethods.id),
     )
     .leftJoin(creditCards, eq(transactions.creditCardId, creditCards.id))
+    .leftJoin(goals, eq(transactions.goalId, goals.id))
     .where(eq(transactions.userId, userId))
     .orderBy(desc(transactions.occurredAt))
     .limit(50);
@@ -147,7 +154,7 @@ export async function saveIncome(input: IncomeFormInput) {
   await assertOwned(userId, categories, parsed.categoryId, "Categoria");
   const method = await resolvePaymentMethod(userId, parsed.paymentMethodId);
 
-  const values = {
+  const baseValues = {
     userId,
     accountId: parsed.accountId,
     categoryId: parsed.categoryId,
@@ -162,15 +169,29 @@ export async function saveIncome(input: IncomeFormInput) {
   };
 
   if (parsed.id) {
+    // Nunca toca fixedExpenseId/competencia numa edição — a proveniência de
+    // um lançamento gerado por receita fixa sobrevive a edições normais.
     await db
       .update(transactions)
-      .set(values)
+      .set(baseValues)
       .where(and(eq(transactions.id, parsed.id), eq(transactions.userId, userId)));
+  } else if (parsed.fixedExpenseId && parsed.competencia) {
+    await assertFixedExpenseOccurrencePending(
+      userId,
+      parsed.fixedExpenseId,
+      parsed.competencia,
+    );
+    await db.insert(transactions).values({
+      ...baseValues,
+      fixedExpenseId: parsed.fixedExpenseId,
+      competencia: parsed.competencia,
+    });
   } else {
-    await db.insert(transactions).values(values);
+    await db.insert(transactions).values(baseValues);
   }
 
   revalidatePath("/lancamentos");
+  revalidatePath("/despesas-fixas");
   revalidatePath("/");
 }
 
@@ -184,6 +205,20 @@ export async function saveExpense(input: ExpenseFormInput) {
 
   if (parsed.id) {
     await assertTransactionNotOnClosedStatement(userId, parsed.id);
+  }
+
+  // Parcelamento é só pra compra nova — nunca uma edição retroativa vira
+  // várias linhas. Gera N transações independentes (uma por fatura
+  // futura) em vez de uma só com o valor total.
+  if (!parsed.id && parsed.installmentCount && parsed.installmentCount > 1) {
+    if (!parsed.isCredit || !parsed.creditCardId) {
+      throw new Error("Parcelamento só é possível numa compra no cartão de crédito.");
+    }
+    await saveInstallmentPurchase(userId, parsed, method, parsed.creditCardId);
+    revalidatePath("/lancamentos");
+    revalidatePath("/cartoes");
+    revalidatePath("/");
+    return;
   }
 
   let accountId: string;
@@ -252,9 +287,60 @@ export async function saveExpense(input: ExpenseFormInput) {
 }
 
 /**
- * Confirma que a competência de uma despesa fixa ainda está pendente
- * (modelo do usuário, não gerada, não dispensada) — defesa contra
- * duplo-clique/corrida na confirmação de uma ocorrência.
+ * Gera as N parcelas de uma compra parcelada no cartão — uma transação
+ * independente por parcela, cada uma na fatura do seu próprio ciclo
+ * futuro (`resolveCreditCardExpenseAccount` já cria a fatura sob demanda,
+ * exatamente como faz para uma compra normal). Deliberadamente **não**
+ * envolve tudo num único `db.transaction(...)`: `resolveCreditCardExpenseAccount`/
+ * `resolveStatementForPurchase` operam sobre o `db` do módulo, não um
+ * `tx` passado por parâmetro — misturar as duas coisas dentro de uma
+ * transação arriscaria comportamento inconsistente no driver do libSQL.
+ * Isso replica exatamente o mesmo padrão (não-transacional) já usado
+ * para uma compra única no crédito logo acima.
+ */
+async function saveInstallmentPurchase(
+  userId: string,
+  parsed: ExpenseFormInput,
+  method: Awaited<ReturnType<typeof resolvePaymentMethod>>,
+  creditCardId: string,
+) {
+  const count = parsed.installmentCount;
+  if (!count) return;
+
+  const totalCents = parseBrlToCents(parsed.amount);
+  const amounts = splitIntoInstallments(totalCents, count);
+  const dates = resolveInstallmentDates(parsed.date, count);
+  const installmentGroupId = crypto.randomUUID();
+
+  for (let i = 0; i < count; i++) {
+    const occurredAt = localDateStringToUtcDate(dates[i]);
+    const resolved = await resolveCreditCardExpenseAccount(userId, creditCardId, occurredAt);
+
+    await db.insert(transactions).values({
+      userId,
+      accountId: resolved.accountId,
+      categoryId: parsed.categoryId,
+      creditCardId,
+      statementId: resolved.statementId,
+      type: "expense",
+      direction: "outflow",
+      paymentMethod: method.kind,
+      customPaymentMethodId: method.id,
+      amountCents: amounts[i],
+      occurredAt,
+      description: `${parsed.description} (${i + 1}/${count})`,
+      notes: parsed.notes || null,
+      installmentGroupId,
+      installmentNumber: i + 1,
+      installmentTotal: count,
+    });
+  }
+}
+
+/**
+ * Confirma que a competência de um lançamento fixo (receita ou despesa)
+ * ainda está pendente (modelo do usuário, não gerada, não dispensada) —
+ * defesa contra duplo-clique/corrida na confirmação de uma ocorrência.
  */
 async function assertFixedExpenseOccurrencePending(
   userId: string,

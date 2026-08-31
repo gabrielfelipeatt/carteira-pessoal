@@ -56,6 +56,7 @@ export function FixedExpenseForm({
   creditCards: CreditCard[];
   editing?: {
     id: string;
+    type: "income" | "expense";
     description: string;
     categoryId: string;
     amountCents: number;
@@ -82,6 +83,7 @@ export function FixedExpenseForm({
     defaultValues: editing
       ? {
           id: editing.id,
+          type: editing.type,
           description: editing.description,
           categoryId: editing.categoryId,
           amount: (editing.amountCents / 100).toFixed(2).replace(".", ","),
@@ -96,6 +98,7 @@ export function FixedExpenseForm({
           notes: editing.notes ?? "",
         }
       : {
+          type: "expense",
           description: "",
           categoryId: "",
           amount: "",
@@ -111,8 +114,14 @@ export function FixedExpenseForm({
         },
   });
 
+  const type = watch("type");
   const paymentMethodId = watch("paymentMethodId");
-  const isCredit = paymentMethods.find((m) => m.id === paymentMethodId)?.kind === "credito";
+  // Receita fixa nunca é no cartão — mesma regra do servidor em
+  // `saveFixedExpense`, replicada aqui pra não mostrar um seletor de
+  // cartão que seria ignorado/rejeitado ao salvar.
+  const isCredit =
+    type === "expense" &&
+    paymentMethods.find((m) => m.id === paymentMethodId)?.kind === "credito";
 
   // Mesma razão de expense-form.tsx: o resolver do Zod valida contra o
   // estado do RHF, não contra a variável derivada.
@@ -123,13 +132,14 @@ export function FixedExpenseForm({
   async function onSubmit(values: FixedExpenseFormInput) {
     try {
       await saveFixedExpense(values);
-      toast.success(editing ? "Despesa fixa atualizada." : "Despesa fixa criada.");
+      const label = values.type === "income" ? "Receita fixa" : "Despesa fixa";
+      toast.success(editing ? `${label} atualizada.` : `${label} criada.`);
       reset();
       onOpenChange(false);
       onSaved?.();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Erro ao salvar despesa fixa.",
+        error instanceof Error ? error.message : "Erro ao salvar lançamento fixo.",
       );
     }
   }
@@ -139,11 +149,38 @@ export function FixedExpenseForm({
       <DialogContent className="max-w-sm rounded-3xl">
         <DialogHeader>
           <DialogTitle className="font-heading">
-            {editing ? "Editar despesa fixa" : "Nova despesa fixa"}
+            {editing
+              ? type === "income"
+                ? "Editar receita fixa"
+                : "Editar despesa fixa"
+              : type === "income"
+                ? "Nova receita fixa"
+                : "Nova despesa fixa"}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+          {!editing ? (
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={type === "income" ? "default" : "outline"}
+                className={type === "income" ? "h-10 bg-income text-income-foreground hover:bg-income/90" : "h-10"}
+                onClick={() => setValue("type", "income")}
+              >
+                Receita
+              </Button>
+              <Button
+                type="button"
+                variant={type === "expense" ? "default" : "outline"}
+                className={type === "expense" ? "h-10 bg-expense text-expense-foreground hover:bg-expense/90" : "h-10"}
+                onClick={() => setValue("type", "expense")}
+              >
+                Despesa
+              </Button>
+            </div>
+          ) : null}
+
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="fixed-expense-description">Descrição</Label>
             <Input
@@ -190,7 +227,7 @@ export function FixedExpenseForm({
           <CategorySelect
             id="fixed-expense-category"
             label="Categoria"
-            kind="expense"
+            kind={type}
             categories={categories}
             value={watch("categoryId")}
             onChange={(value) => setValue("categoryId", value)}
@@ -265,7 +302,11 @@ export function FixedExpenseForm({
           </div>
 
           <Button type="submit" size="lg" className="h-11 mt-2" disabled={isSubmitting}>
-            {isSubmitting ? "Salvando…" : "Salvar despesa fixa"}
+            {isSubmitting
+              ? "Salvando…"
+              : type === "income"
+                ? "Salvar receita fixa"
+                : "Salvar despesa fixa"}
           </Button>
         </form>
       </DialogContent>

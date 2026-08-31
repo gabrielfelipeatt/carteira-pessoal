@@ -3,6 +3,7 @@
 import { requireUserId } from "@/lib/auth/guards";
 import { listAccounts } from "@/lib/actions/accounts";
 import { listTransactions } from "@/lib/actions/transactions";
+import { listReminders } from "@/lib/actions/reminders";
 import { db } from "@/lib/db/client";
 import { categories } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -16,15 +17,23 @@ export async function getDashboardMonth(yearMonth: string = currentYearMonth()) 
   const previous = previousYearMonth(yearMonth);
   const previousRange = monthRange(previous);
 
-  const [accounts, current, previousTotals, spendRows, allCategories, recentTransactions] =
-    await Promise.all([
-      listAccounts(),
-      sumIncomeAndExpense(userId, from, to),
-      sumIncomeAndExpense(userId, previousRange.from, previousRange.to),
-      sumExpenseByCategory(userId, from, to),
-      db.select().from(categories).where(eq(categories.userId, userId)),
-      listTransactions(),
-    ]);
+  const [
+    accounts,
+    current,
+    previousTotals,
+    spendRows,
+    allCategories,
+    recentTransactions,
+    reminders,
+  ] = await Promise.all([
+    listAccounts(),
+    sumIncomeAndExpense(userId, from, to),
+    sumIncomeAndExpense(userId, previousRange.from, previousRange.to),
+    sumExpenseByCategory(userId, from, to),
+    db.select().from(categories).where(eq(categories.userId, userId)),
+    listTransactions(),
+    listReminders(),
+  ]);
 
   const categoryById = new Map(allCategories.map((c) => [c.id, c]));
   const spendByCategory = spendRows
@@ -55,5 +64,6 @@ export async function getDashboardMonth(yearMonth: string = currentYearMonth()) 
     },
     spendByCategory,
     recentTransactions: recentTransactions.slice(0, 5),
+    reminders,
   };
 }

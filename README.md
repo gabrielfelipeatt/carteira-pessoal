@@ -20,7 +20,10 @@ arquivos/extratos.
   fechamento/vencimento, fechamento explícito, pagamento total/parcial,
   limite disponível sempre derivado — compra no crédito nunca afeta uma
   conta real (usa uma conta de controle interna por cartão), só o pagamento
-  da fatura afeta o saldo real
+  da fatura afeta o saldo real. Compra parcelada gera N lançamentos
+  independentes, um por fatura futura (criada sob demanda), com o dia do
+  mês original preservado e clampado em mês curto — nunca uma linha só
+  com o valor total
 - **Categorias e formas de pagamento**: estrutura sugerida do PRD ou
   personalizada, com subcategorias
 - **Dashboard mensal**: saldo consolidado, entradas/saídas, resultado,
@@ -30,11 +33,20 @@ arquivos/extratos.
   evolução do saldo — todos com alternativa em tabela acessível
 - **Orçamentos**: limite mensal por categoria, com rollup automático de
   subcategorias na categoria-pai e status normal/atenção/acima do limite
-- **Despesas fixas recorrentes**: cadastro único (conta de luz, água,
-  internet...) com dia do mês e data final opcional; cada competência
-  pendente é calculada em tempo real (sem cron) e só vira lançamento com
-  confirmação explícita — também dá para dispensar um mês específico sem
-  afetar os seguintes
+- **Lançamentos fixos recorrentes (despesas e receitas)**: cadastro único
+  (conta de luz, água, internet, salário...) com dia do mês e data final
+  opcional; cada competência pendente é calculada em tempo real (sem cron)
+  e só vira lançamento com confirmação explícita — também dá para
+  dispensar um mês específico sem afetar os seguintes
+- **Avisos no dashboard**: faturas a vencer/vencidas (próximos 5 dias) e
+  lançamentos fixos pendentes, num só feed ordenado por urgência —
+  calculado em tempo real a partir de dados já existentes (sem tabela ou
+  cron novos), sem notificação push/e-mail (fora do escopo)
+- **Metas financeiras**: objetivo de economia com valor-alvo e mês-alvo
+  opcional; progresso sempre derivado da soma de aportes/resgates (nunca
+  um contador solto) — aporte/resgate é sempre uma transferência
+  (`type:'transfer'`), nunca conta como receita/despesa nos relatórios,
+  mesma regra que já protege pagamento de fatura
 
 ## Pré-requisitos
 
@@ -142,7 +154,7 @@ arquivos/extratos.
 
 - Toda leitura/escrita de dados financeiros passa por `requireSession()` /
   `requireUserId()` (`lib/auth/guards.ts`) e filtra explicitamente por
-  `userId` no banco — auditado manualmente em todas as 38 server actions do
+  `userId` no banco — auditado manualmente em todas as 43 server actions do
   projeto (`lib/actions/*.ts`), sem exceção.
 - `proxy.ts` só faz uma checagem rápida de cookie para redirecionar a UI de
   visitantes anônimos (confirmado por `tests/e2e/login.spec.ts`); a
@@ -160,11 +172,10 @@ arquivos/extratos.
 
 ## Limitações conhecidas
 
-- Sem importação de extratos, Open Finance, parcelamento de cartão, metas
-  financeiras, exportação CSV/OFX, notificações de vencimento ou tema
-  escuro (fora do escopo da v1 — ver `todo.md`). Despesas fixas
-  recorrentes existem (ver acima), mas só para despesas — sem receita
-  recorrente (ex: salário) por enquanto.
+- Sem importação de extratos, Open Finance, exportação CSV/OFX ou tema
+  escuro (fora do escopo da v1 — ver `todo.md`). Os avisos
+  de vencimento existem dentro do app (ver acima), mas só como push/e-mail
+  é que continuam fora de escopo.
 - Usuário único: o app não foi desenhado para múltiplas contas/pessoas na
   mesma carteira. Por isso, o isolamento por usuário foi verificado por
   auditoria de código (todo `select`/`update`/`delete` filtra por `userId`)
@@ -173,9 +184,10 @@ arquivos/extratos.
   specs Playwright de `accounts`/`receita-despesa`/`outros`/`cartoes`/
   `relatorios`/`orcamentos` ainda não existem — a cobertura desses fluxos
   hoje é: testes unitários das regras de negócio puras (dinheiro, datas,
-  ciclo de fatura, rollup de orçamento, despesas fixas — 42 testes) +
-  verificação manual extensiva no navegador, documentada fase a fase em
-  `todo.md`.
+  ciclo de fatura, rollup de orçamento, despesas fixas, lembretes,
+  parcelamento, metas — 60 testes) + verificação manual extensiva no
+  navegador, documentada fase a
+  fase em `todo.md`.
 - `pnpm run test:e2e` roda com 1 worker (não paralelo): o Turso é
   single-writer e logins simultâneos de vários workers colidem na escrita
   da sessão — nunca acontece no uso real, de usuário único.

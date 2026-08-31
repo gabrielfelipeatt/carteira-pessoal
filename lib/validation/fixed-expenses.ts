@@ -3,6 +3,7 @@ import { z } from "zod";
 export const fixedExpenseFormSchema = z
   .object({
     id: z.string().optional(),
+    type: z.enum(["income", "expense"]),
     description: z.string().trim().min(1, "Informe uma descrição."),
     categoryId: z.string().min(1, "Selecione uma categoria."),
     amount: z.string().min(1, "Informe o valor."),
@@ -39,6 +40,10 @@ export const fixedExpenseFormSchema = z
   .refine((data) => !data.endMonth || data.endMonth >= data.startMonth, {
     message: "O mês final não pode ser antes do mês inicial.",
     path: ["endMonth"],
+  })
+  .refine((data) => data.type === "expense" || !data.isCredit, {
+    message: "Receita fixa não pode ser no cartão de crédito.",
+    path: ["isCredit"],
   });
 
 export type FixedExpenseFormInput = z.infer<typeof fixedExpenseFormSchema>;
