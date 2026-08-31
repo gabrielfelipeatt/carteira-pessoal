@@ -77,6 +77,7 @@ export default async function DashboardPage({
           </div>
 
           <KpiCards
+            yearMonth={data.yearMonth}
             incomeCents={data.incomeCents}
             expenseCents={data.expenseCents}
             resultCents={data.resultCents}

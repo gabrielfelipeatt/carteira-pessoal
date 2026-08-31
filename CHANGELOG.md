@@ -4,6 +4,15 @@ Todas as alterações relevantes deste projeto são documentadas neste arquivo.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/) e o
 versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.8.0] - 2026-08-31
+
+### Adicionado
+- Os cards "Entradas" e "Saídas" do dashboard agora são links pra
+  `/relatorios`, já filtrados por tipo (receita/despesa) e pelo mês
+  exibido — dá pra clicar e ver a tabela detalhada e os gráficos por trás
+  do valor. `/relatorios` passa a ler filtros iniciais pela URL
+  (`tipo`, `de`, `ate`), então também é deep-linkável.
+
 ## [0.7.1] - 2026-08-31
 
 ### Alterado
