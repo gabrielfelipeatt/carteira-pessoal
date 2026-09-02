@@ -112,7 +112,7 @@ export default async function DashboardPage({
               <h2 className="font-heading text-sm font-semibold text-muted-foreground">
                 Avisos
               </h2>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3">
                 {data.reminders.map((reminder) =>
                   reminder.kind === "statement" ? (
                     <Link

@@ -4,6 +4,27 @@ Todas as alterações relevantes deste projeto são documentadas neste arquivo.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/) e o
 versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.9.0] - 2026-09-02
+
+### Adicionado
+- Layout de computador de verdade a partir de 1024px (`lg:`), via
+  breakpoints CSS do Tailwind (sem detecção de dispositivo/user-agent):
+  a barra inferior de abas some e vira uma barra lateral fixa
+  (`components/app-shell/sidebar-nav.tsx`, novo) mostrando todos os
+  destinos de uma vez (sem menu "Mais" — desktop tem espaço de sobra),
+  reaproveitando a mesma lista `primaryNavItems`/`moreMenuItems` de
+  antes. O "cartão" centralizado que hoje representa o app em telas
+  médias (768–1023px, sem mudança nenhuma) dá lugar a conteúdo em
+  largura cheia. Listas de cards autocontidos (avisos do dashboard,
+  orçamentos, metas, lançamentos fixos, cartões) reorganizam em grade de
+  2 colunas; os gráficos de relatórios reorganizam em 2 colunas com a
+  evolução de saldo e a tabela ocupando a largura toda. Lista dividida
+  (contas, últimos lançamentos, categorias) continua em coluna única,
+  só ganha uma largura máxima de leitura confortável.
+- `components/app-shell/use-sign-out.ts` (novo): hook único de logout,
+  substituindo a mesma lógica que estava duplicada em `bottom-nav.tsx`
+  e `configuracoes/sign-out-button.tsx`.
+
 ## [0.8.0] - 2026-08-31
 
 ### Adicionado

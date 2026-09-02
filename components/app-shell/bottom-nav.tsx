@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { authClient } from "@/lib/auth/auth-client";
 import {
   Sheet,
   SheetContent,
@@ -12,22 +11,17 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { useSignOut } from "./use-sign-out";
 import { moreMenuItems, moreNavIcon as MoreIcon, primaryNavItems } from "./nav-items";
 
 export function BottomNav() {
   const pathname = usePathname();
-  const router = useRouter();
-
-  async function handleSignOut() {
-    await authClient.signOut();
-    router.push("/login");
-    router.refresh();
-  }
+  const signOut = useSignOut();
 
   return (
     <nav
       aria-label="Navegação principal"
-      className="sticky bottom-0 z-10 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80"
+      className="sticky bottom-0 z-10 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 lg:hidden"
     >
       <ul className="grid grid-cols-5">
         {primaryNavItems.map(({ href, label, icon: Icon }) => {
@@ -79,7 +73,7 @@ export function BottomNav() {
                 ))}
                 <button
                   type="button"
-                  onClick={handleSignOut}
+                  onClick={signOut}
                   className="mt-2 flex items-center gap-2 rounded-xl border-t border-border px-3 py-3 text-left text-sm font-medium text-destructive hover:bg-accent"
                 >
                   <LogOut className="size-4" aria-hidden />

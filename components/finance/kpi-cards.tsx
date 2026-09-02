@@ -28,7 +28,7 @@ export function KpiCards({
   const ate = utcDateToLocalDateString(to);
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <Link
         href={`/relatorios?tipo=income&de=${de}&ate=${ate}`}
         className="rounded-2xl border border-border bg-card px-4 py-3"

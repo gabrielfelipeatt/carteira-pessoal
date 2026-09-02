@@ -163,7 +163,8 @@ export function DespesasFixasView({
               <h2 className="font-heading text-sm font-semibold text-muted-foreground">
                 Pendentes
               </h2>
-              {pending.map((occurrence) => (
+              <div className="flex flex-col gap-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3">
+                {pending.map((occurrence) => (
                 <div
                   key={`${occurrence.fixedExpenseId}-${occurrence.competencia}`}
                   className="rounded-2xl border border-border bg-card px-4 py-3"
@@ -226,7 +227,8 @@ export function DespesasFixasView({
                     </Button>
                   </div>
                 </div>
-              ))}
+                ))}
+              </div>
             </div>
           ) : null}
 
@@ -234,7 +236,8 @@ export function DespesasFixasView({
             <h2 className="font-heading text-sm font-semibold text-muted-foreground">
               Cadastradas
             </h2>
-            {fixedExpenses.map((fixedExpense) => (
+            <div className="flex flex-col gap-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3">
+              {fixedExpenses.map((fixedExpense) => (
               <div
                 key={fixedExpense.id}
                 className="rounded-2xl border border-border bg-card px-4 py-3"
@@ -305,8 +308,9 @@ export function DespesasFixasView({
                     </AlertDialog>
                   </div>
                 </div>
-              </div>
-            ))}
+                </div>
+              ))}
+            </div>
           </div>
         </>
       )}

@@ -73,7 +73,7 @@ export function OrcamentosView({
           }
         />
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3">
           {budgets.map((budget) => (
             <BudgetProgress
               key={budget.id}

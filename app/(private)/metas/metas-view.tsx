@@ -75,7 +75,7 @@ export function MetasView({
           }
         />
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3">
           {goals.map((goal) => (
             <GoalProgress
               key={goal.id}

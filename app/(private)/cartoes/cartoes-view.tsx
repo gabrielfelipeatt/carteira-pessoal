@@ -51,7 +51,7 @@ export function CartoesView({ cards }: { cards: CreditCard[] }) {
           }
         />
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3">
           {cards.map((card) => (
             <li key={card.id}>
               <Link

@@ -76,14 +76,18 @@ export function RelatoriosView({
       />
 
       <div
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start"
         aria-busy={isPending}
         aria-live="polite"
       >
         <SpendByCategoryChart items={spend} />
         <IncomeExpenseChart points={series} />
-        <BalanceEvolutionChart points={balance} />
-        <ReportsTable rows={rows} />
+        <div className="lg:col-span-2">
+          <BalanceEvolutionChart points={balance} />
+        </div>
+        <div className="lg:col-span-2">
+          <ReportsTable rows={rows} />
+        </div>
       </div>
     </div>
   );

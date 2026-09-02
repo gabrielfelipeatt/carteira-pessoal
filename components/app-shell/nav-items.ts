@@ -3,7 +3,12 @@ import {
   Home,
   ListChecks,
   MoreHorizontal,
+  PiggyBank,
   PieChart,
+  Repeat,
+  Settings,
+  Tags,
+  Target,
 } from "lucide-react";
 
 export const primaryNavItems = [
@@ -14,11 +19,11 @@ export const primaryNavItems = [
 ] as const;
 
 export const moreMenuItems = [
-  { href: "/orcamentos", label: "Orçamentos" },
-  { href: "/metas", label: "Metas" },
-  { href: "/despesas-fixas", label: "Lançamentos fixos" },
-  { href: "/categorias", label: "Categorias" },
-  { href: "/configuracoes", label: "Configurações" },
+  { href: "/orcamentos", label: "Orçamentos", icon: Target },
+  { href: "/metas", label: "Metas", icon: PiggyBank },
+  { href: "/despesas-fixas", label: "Lançamentos fixos", icon: Repeat },
+  { href: "/categorias", label: "Categorias", icon: Tags },
+  { href: "/configuracoes", label: "Configurações", icon: Settings },
 ] as const;
 
 export const moreNavIcon = MoreHorizontal;

@@ -1,7 +1,10 @@
 # Carteira Pessoal
 
 Carteira financeira pessoal privada, de usuário único, com experiência de
-aplicativo móvel. Ver [`.claude/plans` / PRD] para a especificação completa.
+aplicativo móvel — e um layout de computador de verdade a partir de
+1024px (barra lateral + conteúdo em largura cheia), via breakpoints
+CSS do Tailwind, não detecção de dispositivo. Ver [`.claude/plans` / PRD]
+para a especificação completa.
 
 Stack: Next.js (App Router) + TypeScript + Tailwind CSS + shadcn/ui,
 Drizzle ORM + Turso (libSQL), Better Auth (e-mail/senha, usuário único), Zod,
@@ -47,6 +50,13 @@ arquivos/extratos.
   um contador solto) — aporte/resgate é sempre uma transferência
   (`type:'transfer'`), nunca conta como receita/despesa nos relatórios,
   mesma regra que já protege pagamento de fatura
+- **Layout de computador**: a partir de 1024px de largura (`lg:`), a
+  barra inferior de abas vira uma barra lateral fixa (com todos os
+  destinos, sem menu "Mais") e o "cartão" centralizado de tela cede lugar
+  a conteúdo em largura cheia, com listas de cards (orçamentos, metas,
+  lançamentos fixos, cartões, avisos) e o dashboard de relatórios
+  reorganizados em grade. Em telas médias (768–1023px) o layout continua
+  sendo o cartão centralizado de sempre; no celular, nada muda
 
 ## Pré-requisitos
 
