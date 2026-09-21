@@ -1,5 +1,6 @@
 import {
   CreditCard,
+  FileUp,
   Home,
   ListChecks,
   MoreHorizontal,
@@ -23,6 +24,7 @@ export const moreMenuItems = [
   { href: "/metas", label: "Metas", icon: PiggyBank },
   { href: "/despesas-fixas", label: "Lançamentos fixos", icon: Repeat },
   { href: "/categorias", label: "Categorias", icon: Tags },
+  { href: "/importar", label: "Importar planilha", icon: FileUp },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ] as const;
 

@@ -203,6 +203,9 @@ export async function payStatement(
   statementId: string,
   amountCents: number,
   payingAccountId: string,
+  // Só a importação de planilha informa a data real do pagamento; no uso
+  // normal o pagamento é sempre "agora".
+  occurredAt: Date = new Date(),
 ) {
   if (amountCents <= 0) {
     throw new StatementIntegrityError("O valor do pagamento deve ser positivo.");
@@ -256,7 +259,7 @@ export async function payStatement(
       type: "transfer",
       direction: "outflow",
       amountCents,
-      occurredAt: new Date(),
+      occurredAt,
       description: `Pagamento de fatura — ${statement.referenceMonth}`,
       notes: null,
     });

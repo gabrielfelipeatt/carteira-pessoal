@@ -14,6 +14,7 @@ import {
   paymentMethods,
   transactions,
 } from "@/db/schema";
+import { toResult, UserFacingError, type ActionResult } from "@/lib/actions/result";
 import { requireUserId } from "@/lib/auth/guards";
 import {
   adjustmentFormSchema,
@@ -124,7 +125,7 @@ async function assertTransactionNotOnClosedStatement(
     .where(eq(creditCardStatements.id, existing.statementId));
 
   if (statement && statement.status !== "open") {
-    throw new Error(
+    throw new UserFacingError(
       "Esta compra pertence a uma fatura já fechada e não pode ser editada ou removida.",
     );
   }
@@ -436,7 +437,7 @@ export async function saveTransfer(input: TransferFormInput) {
   revalidatePath("/");
 }
 
-export async function removeTransaction(transactionId: string) {
+async function removeTransactionOrThrow(transactionId: string) {
   const userId = await requireUserId();
 
   const [existing] = await db
@@ -450,14 +451,14 @@ export async function removeTransaction(transactionId: string) {
     .where(and(eq(transactions.id, transactionId), eq(transactions.userId, userId)));
 
   if (!existing) {
-    throw new Error("Lançamento não encontrado.");
+    throw new UserFacingError("Lançamento não encontrado.");
   }
 
   if (existing.statementId && !existing.transferGroupId) {
     // Compra no crédito (bloqueada se a fatura já fechou) ou pagamento de
     // fatura (nunca removido por aqui — gerencie pela tela do cartão).
     if (existing.type === "transfer") {
-      throw new Error(
+      throw new UserFacingError(
         "Pagamentos de fatura não podem ser removidos pelos lançamentos — gerencie pela tela do cartão.",
       );
     }
@@ -475,4 +476,8 @@ export async function removeTransaction(transactionId: string) {
   revalidatePath("/lancamentos");
   revalidatePath("/cartoes");
   revalidatePath("/");
+}
+
+export async function removeTransaction(transactionId: string): Promise<ActionResult> {
+  return toResult(() => removeTransactionOrThrow(transactionId));
 }

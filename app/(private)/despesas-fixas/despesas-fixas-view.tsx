@@ -102,7 +102,11 @@ export function DespesasFixasView({
 
   async function handleRemove(id: string) {
     try {
-      await removeFixedExpense(id);
+      const result = await removeFixedExpense(id);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Lançamento fixo removido.");
       refresh();
     } catch (error) {

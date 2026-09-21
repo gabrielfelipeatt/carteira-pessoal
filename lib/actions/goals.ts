@@ -4,6 +4,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db/client";
 import { accounts, goals, transactions } from "@/db/schema";
+import { toResult, UserFacingError, type ActionResult } from "@/lib/actions/result";
 import { requireUserId } from "@/lib/auth/guards";
 import {
   goalContributionFormSchema,
@@ -81,7 +82,7 @@ export async function saveGoal(input: GoalFormInput) {
   revalidatePath("/metas");
 }
 
-export async function removeGoal(goalId: string) {
+async function removeGoalOrThrow(goalId: string) {
   const userId = await requireUserId();
 
   const [existing] = await db
@@ -89,7 +90,7 @@ export async function removeGoal(goalId: string) {
     .from(goals)
     .where(and(eq(goals.id, goalId), eq(goals.userId, userId)));
   if (!existing) {
-    throw new Error("Meta não encontrada.");
+    throw new UserFacingError("Meta não encontrada.");
   }
 
   const [linkedTransaction] = await db
@@ -98,7 +99,7 @@ export async function removeGoal(goalId: string) {
     .where(eq(transactions.goalId, goalId))
     .limit(1);
   if (linkedTransaction) {
-    throw new Error(
+    throw new UserFacingError(
       "Esta meta já tem aportes ou resgates e não pode ser removida. Você pode desativá-la em vez disso.",
     );
   }
@@ -106,6 +107,10 @@ export async function removeGoal(goalId: string) {
   await db.delete(goals).where(and(eq(goals.id, goalId), eq(goals.userId, userId)));
 
   revalidatePath("/metas");
+}
+
+export async function removeGoal(goalId: string): Promise<ActionResult> {
+  return toResult(() => removeGoalOrThrow(goalId));
 }
 
 /**

@@ -12,6 +12,7 @@ import {
   paymentMethods,
   transactions,
 } from "@/db/schema";
+import { toResult, UserFacingError, type ActionResult } from "@/lib/actions/result";
 import { requireUserId } from "@/lib/auth/guards";
 import {
   fixedExpenseFormSchema,
@@ -125,7 +126,7 @@ export async function saveFixedExpense(input: FixedExpenseFormInput) {
   revalidatePath("/lancamentos");
 }
 
-export async function removeFixedExpense(fixedExpenseId: string) {
+async function removeFixedExpenseOrThrow(fixedExpenseId: string) {
   const userId = await requireUserId();
 
   const [existing] = await db
@@ -133,7 +134,7 @@ export async function removeFixedExpense(fixedExpenseId: string) {
     .from(fixedExpenses)
     .where(and(eq(fixedExpenses.id, fixedExpenseId), eq(fixedExpenses.userId, userId)));
   if (!existing) {
-    throw new Error("Despesa fixa não encontrada.");
+    throw new UserFacingError("Despesa fixa não encontrada.");
   }
 
   const [linkedTransaction] = await db
@@ -142,7 +143,7 @@ export async function removeFixedExpense(fixedExpenseId: string) {
     .where(eq(transactions.fixedExpenseId, fixedExpenseId))
     .limit(1);
   if (linkedTransaction) {
-    throw new Error(
+    throw new UserFacingError(
       "Esta despesa fixa já tem lançamentos gerados e não pode ser removida. Você pode desativá-la em vez disso.",
     );
   }
@@ -153,6 +154,10 @@ export async function removeFixedExpense(fixedExpenseId: string) {
 
   revalidatePath("/despesas-fixas");
   revalidatePath("/lancamentos");
+}
+
+export async function removeFixedExpense(fixedExpenseId: string): Promise<ActionResult> {
+  return toResult(() => removeFixedExpenseOrThrow(fixedExpenseId));
 }
 
 export async function listPendingFixedExpenseOccurrences() {

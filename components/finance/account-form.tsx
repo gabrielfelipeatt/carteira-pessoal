@@ -64,7 +64,11 @@ export function AccountForm({
     if (!account) return;
     setDeleting(true);
     try {
-      await removeAccount(account.id);
+      const result = await removeAccount(account.id);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Conta excluída.");
       onOpenChange(false);
       onSaved?.();

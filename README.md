@@ -10,8 +10,9 @@ Stack: Next.js (App Router) + TypeScript + Tailwind CSS + shadcn/ui,
 Drizzle ORM + Turso (libSQL), Better Auth (e-mail/senha, usuário único), Zod,
 Vitest + Playwright.
 
-Todos os lançamentos são preenchidos manualmente — o app não recebe upload de
-arquivos/extratos.
+Os lançamentos são preenchidos manualmente ou importados de uma planilha
+.xlsx (ver "Importar planilha" abaixo) — o app não recebe extratos
+bancários (OFX/PDF) nem usa Open Finance.
 
 ## Funcionalidades implementadas
 
@@ -50,6 +51,19 @@ arquivos/extratos.
   um contador solto) — aporte/resgate é sempre uma transferência
   (`type:'transfer'`), nunca conta como receita/despesa nos relatórios,
   mesma regra que já protege pagamento de fatura
+- **Importar planilha** (`/importar`): lê um `.xlsx` com as abas `itau`
+  (conta), `nubank` (cartão de crédito) e/ou `flash` (cartão alimentação),
+  cada uma com as colunas `data`, `valor`, `desc` (e `tipo` em itau/flash).
+  O arquivo é lido no navegador e **nada é gravado antes de uma prévia**
+  linha a linha (você desmarca o que não quer). Cofrinho (aplicação/resgate)
+  vira transferência para uma conta "Cofrinho" própria, nunca
+  receita/despesa; Pix com o nome do cartão vira pagamento de fatura (na
+  data real do extrato); compras no cartão entram na fatura do ciclo certo;
+  cada tipo do flash vira uma conta separada ("Flash Flexível", ...).
+  Duplicatas são detectadas por **data + valor + sentido**, por contagem
+  (dois lançamentos idênticos no mesmo dia continuam sendo dois). Crédito/
+  estorno no cartão e compras em fatura já fechada ficam "para revisar"
+  (o app não modela crédito em fatura)
 - **Layout de computador**: a partir de 1024px de largura (`lg:`), a
   barra inferior de abas vira uma barra lateral fixa (com todos os
   destinos, sem menu "Mais") e o "cartão" centralizado de tela cede lugar
@@ -153,8 +167,16 @@ arquivos/extratos.
   rápida de cookie para redirecionar a UI. A autorização de verdade é feita
   em `lib/auth/guards.ts` (`requireSession()`), chamada por toda
   server action/query antes de tocar no banco.
-- **Sem importação de arquivos**: por decisão do usuário, não há upload de
-  extratos (CSV/PDF) nem storage de objetos — todo lançamento é manual.
+- **Importação sem armazenamento de arquivo**: a planilha é lida no
+  navegador (`read-excel-file`) e só as linhas normalizadas vão ao servidor,
+  que valida tudo de novo (zod) e refaz a detecção de duplicatas na hora de
+  gravar — nunca confia no status mostrado na prévia. Não há storage de
+  objetos nem guarda do arquivo.
+- **Erros de regra de negócio nunca são `throw` em server action de
+  remoção**: em produção o Next.js apaga a mensagem de qualquer erro
+  lançado (o usuário via "Minified React error #441"). As ações de remover
+  meta/lançamento fixo/conta/lançamento devolvem `{ ok: false, error }`
+  (`lib/actions/result.ts`).
 - **Regra de não duplicidade**: pagar uma fatura de cartão é sempre
   `type: 'transfer'`, nunca uma nova despesa — ver `lib/finance/statements.ts`.
   Transferências entre contas próprias nunca contam como entrada/saída nos
@@ -182,7 +204,7 @@ arquivos/extratos.
 
 ## Limitações conhecidas
 
-- Sem importação de extratos, Open Finance, exportação CSV/OFX ou tema
+- Sem importação de extratos bancários (OFX/PDF), Open Finance, exportação CSV/OFX ou tema
   escuro (fora do escopo da v1 — ver `todo.md`). Os avisos
   de vencimento existem dentro do app (ver acima), mas só como push/e-mail
   é que continuam fora de escopo.

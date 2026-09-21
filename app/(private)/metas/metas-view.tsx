@@ -38,7 +38,11 @@ export function MetasView({
 
   async function handleRemove(id: string) {
     try {
-      await removeGoal(id);
+      const result = await removeGoal(id);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Meta removida.");
       refresh();
     } catch (error) {

@@ -4,6 +4,34 @@ Todas as alterações relevantes deste projeto são documentadas neste arquivo.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/) e o
 versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.10.0] - 2026-09-21
+
+### Adicionado
+- Importar planilha (`/importar`, no menu "Mais"/barra lateral): lê um
+  `.xlsx` com as abas `itau`, `nubank` e/ou `flash` no próprio navegador
+  (`read-excel-file`, dependência nova) e mostra uma prévia linha a linha
+  antes de gravar qualquer coisa. Aba `itau` → lançamentos da conta
+  escolhida (categoria sugerida pelo histórico da mesma descrição; senão
+  "Sem categoria"); "Aplicação Cofrinho"/"Cofrinhos" → transferência para
+  uma conta "Cofrinho" separada (criada se não existir), nunca
+  receita/despesa; saída com o nome de um cartão → pagamento de fatura, na
+  data do extrato, alocado à fatura mais antiga com saldo suficiente. Aba
+  `nubank` → compras na fatura do ciclo correto (pagamento e crédito não
+  viram compra). Aba `flash` → uma conta por `tipo` ("Flash Flexível",
+  "Flash Refeição e Alimentação"; "Ajuste" vira ajuste de saldo).
+  Duplicatas por data + valor + sentido, comparadas por contagem
+  (`lib/finance/import.ts`, lógica pura com testes). O servidor refaz a
+  análise ao gravar, nunca confia na prévia.
+- `payStatement` aceita a data real do pagamento (padrão continua sendo
+  "agora"), necessário para importar histórico.
+
+### Corrigido
+- Remover uma meta (ou lançamento fixo, conta, lançamento) que tinha
+  histórico mostrava "Minified React error #441" em produção: o Next.js
+  apaga a mensagem de qualquer erro lançado por server action. Essas
+  quatro ações de remoção agora devolvem `{ ok, error }`
+  (`lib/actions/result.ts`) e a tela mostra o motivo real.
+
 ## [0.9.0] - 2026-09-02
 
 ### Adicionado

@@ -150,7 +150,11 @@ export function TransactionList({
   async function handleRemove(id: string) {
     setPendingDeleteId(id);
     try {
-      await removeTransaction(id);
+      const result = await removeTransaction(id);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Lançamento removido.");
       onRemoved?.();
     } catch (error) {
